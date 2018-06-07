@@ -80,7 +80,7 @@ f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
 % % % Darstellung
-f_FigNum = 1;           % Nummer der figure
+f_FigNum = 2;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
 f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
@@ -123,6 +123,13 @@ d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_Power = sprintf('%sOut_Power%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_Access = sprintf('%s%s%s Access.csv',d_Dat,satName,fmt_Base(1:end-5));
 d_SubSol = sprintf('%s%s%s SunAngles.csv',d_Dat,satName,fmt_Base);
+
+% Data and formatStrings(NEW and FIXED for Albedo)
+d_SubSol_fix = sprintf('%sSunAngles.csv',d_Dat);
+fStr_SubSol = '%d %s %d %12s,%f,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f), subsolar (f)
+d_EarthAngles = sprintf('%sEarthAngles.csv',d_Dat);
+fStr_EarthAngles = '%d %s %d %12s,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f)
+
 % Formatstrings
 fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
 fstrPower = '%d %s %d %12s;%f';
@@ -147,9 +154,14 @@ t_DaySec = 24*3600;
 
 % Physikalische Konstanten
 consts;
+clearConstants = true;
+r = (RE)/(RE+Alt*1e3);
+%%%%%% CONSTANT RHO TEST
+rho = 140;
 
 % maximaler Subsolarwinkel für Albedo
-AlbMaxAngle = acosd(RE/au) + acosd(RE/(RE+Alt*1e3));
+AlbMaxAngle = 100; % [deg] NEW (albedo formula depends on cos(0.9*theta)^1.5, complex numbers above 100 deg
+%acosd(RE/au) + acosd(RE/(RE+Alt*1e3)); % OLD
 
 %% Daten einlesen
 if (f_ReloadAllData == 1)
@@ -178,8 +190,14 @@ if (f_ReloadAllData == 1)
     
     % % Subsolarwinkel
     fprintf(' ... Subsolarwinkel ...\n');
-    dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
-    dat_SubSol = dat_temp(end);
+    dat_temp = ReadCSV(d_SubSol,fstrSubSol,1); % OLD
+    dat_SubSol = dat_temp(end); % OLD
+    % FIXED, NEW CODE
+    dat_temp = ReadCSV(d_SubSol_fix,fStr_SubSol,1); % NEW
+    dat_SubSol_fix = dat_temp(end); % NEW
+    dat_temp = ReadCSV(d_EarthAngles,fStr_EarthAngles,1); % NEW
+    dat_EarthAngles = dat_temp(end-1:end); % NEW
+    
     
     % % Zugriffszeiten
     if (f_IgnoreAccessIntervals == 0)
@@ -518,7 +536,7 @@ for tt = ran
         end
         
         % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
-        if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
+        if (f_Alb == 1 && dat_SubSol_fix{1}(tt) < AlbMaxAngle)
             % Fläche aus Sicht der Erde
             if (cIdx >= 0)
                 A = dat_AreaE{1,cIdx}(tt);
@@ -535,7 +553,7 @@ for tt = ran
                 facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
                 facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
                 % Korrektur anhand des Subsolarwinkels
-                alpha = dat_SubSol{1}(tt);
+                alpha = dat_SubSol_fix{1}(tt);
                 a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
                 facInc_C = facInc_C + a_c;
                 facInc_H = facInc_H + a_c;
@@ -544,8 +562,10 @@ for tt = ran
                 facInc_H = f_UseFixedAlbedo;
             end
             % Leistungsänderung
-            P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C;
-            P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H;
+            P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol_fix{1}(tt),r,rho); % NEW
+            P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol_fix{1}(tt),r,rho); % NEW
+            %P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C; % OLD
+            %P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H; % OLD
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
             P_H = P_H * (Sat_Struct(ss).size > 0);
@@ -826,4 +846,9 @@ end
 if (f_SaveResults == 1)
     pfad = [d_Par 'Daten' fmt_Base '.mat'];
     save(pfad);
+end
+
+%% Clear workspace clutter
+if clearConstants
+    clearConsts
 end
