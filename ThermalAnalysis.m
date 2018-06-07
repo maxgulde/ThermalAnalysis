@@ -13,7 +13,8 @@
 
 % Änderungen
 % 2.4
-% - Change #3
+% - Changed albedo to fitted function of Lockheed Martin's Data (includes
+%   view factor)
 % 2.3
 % - kompatibel gemacht zun Sidos Berechnungen für Validierung via Thermal Desktop
 % - Sol_Flux (hot case), fixer Albedowert, Celsius als Einheit, keine Zugriffszeiten, 
@@ -122,13 +123,8 @@ d_AreaS = sprintf('%sOut_AreaSunView%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_Power = sprintf('%sOut_Power%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_Access = sprintf('%s%s%s Access.csv',d_Dat,satName,fmt_Base(1:end-5));
-d_SubSol = sprintf('%s%s%s SunAngles.csv',d_Dat,satName,fmt_Base);
-
-% Data and formatStrings(NEW and FIXED for Albedo)
-d_SubSol_fix = sprintf('%sSunAngles.csv',d_Dat);
-fStr_SubSol = '%d %s %d %12s,%f,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f), subsolar (f)
+d_SubSol = sprintf('%sSunAngles.csv',d_Dat);
 d_EarthAngles = sprintf('%sEarthAngles.csv',d_Dat);
-fStr_EarthAngles = '%d %s %d %12s,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f)
 
 % Formatstrings
 fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
@@ -140,7 +136,8 @@ fstrDate = 'dd mmm yyyy HH:MM:SS';
 fstrCmp = '%s %d %f %f';
 fstrMat = '%s %f %f %f';
 fstrStr = '%s %s %s %f %f %s %f %f';
-fstrSubSol = '%d %s %d %12s,%f,%f,%f,%f';
+fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f), subsolar (f)
+fStrEarthAngles = '%d %s %d %12s,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f)
 fstrOrder = '%s %s %s %s';
 fstrTCo = '%s %s %f %f %f';
 fstrXLo = '%s %f %f %f';
@@ -158,8 +155,7 @@ clearConstants = true;
 r = (RE)/(RE+Alt*1e3);
 
 % maximaler Subsolarwinkel für Albedo
-AlbMaxAngle = 100; % [deg] NEW (albedo formula depends on cos(0.9*theta)^1.5, complex numbers above 100 deg
-%acosd(RE/au) + acosd(RE/(RE+Alt*1e3)); % OLD
+AlbMaxAngle = 100; % [deg] (Above 100 deg the formula generates complex numbers)
 
 %% Daten einlesen
 if (f_ReloadAllData == 1)
@@ -188,13 +184,13 @@ if (f_ReloadAllData == 1)
     
     % % Subsolarwinkel
     fprintf(' ... Subsolarwinkel ...\n');
-    dat_temp = ReadCSV(d_SubSol,fstrSubSol,1); % OLD
-    dat_SubSol = dat_temp(end); % OLD
-    % FIXED, NEW CODE
-    dat_temp = ReadCSV(d_SubSol_fix,fStr_SubSol,1); % NEW
-    dat_SubSol_fix = dat_temp(end); % NEW
-    dat_temp = ReadCSV(d_EarthAngles,fStr_EarthAngles,1); % NEW
-    dat_EarthAngles = dat_temp(end-1:end); % NEW
+    dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
+    dat_SubSol = dat_temp(end);
+    
+    % % Local Zenith
+    fprintf(' ... Local Zenith ...\n');
+    dat_temp = ReadCSV(d_EarthAngles,fStrEarthAngles,1);
+    dat_EarthAngles = dat_temp(end-1:end);
     
     
     % % Zugriffszeiten
@@ -374,12 +370,11 @@ for tt = ran
     t_Now = (count - 1) * t_Res * t_Step;
     count = count + 1;
     
-    % Earth angles
-    %azEarth = dat_EarthAngles{1}(tt); % NEW
-    %elEarth = dat_EarthAngles{2}(tt); % NEW
+    % Local zenith
     [localZenith(1),localZenith(2),localZenith(3)] = ...
-        sph2cart(dat_EarthAngles{1}(tt),dat_EarthAngles{2}(tt),1); % NEW, Negative of the vector that points towards the Earth
-    localZenith = - localZenith;
+        sph2cart(dat_EarthAngles{1}(tt),dat_EarthAngles{2}(tt),1);
+    localZenith = - localZenith; % Negative of the vector that points towards the Earth
+    
     % % % (A) Isolierte Betrachtung
     for ss = f_IncludedParts
         
@@ -543,7 +538,7 @@ for tt = ran
         end
         
         % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
-        if (f_Alb == 1 && dat_SubSol_fix{1}(tt) < AlbMaxAngle)
+        if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
             % Fläche aus Sicht der Erde
             if (cIdx >= 0)
                 A = dat_AreaE{1,cIdx}(tt);
@@ -560,7 +555,7 @@ for tt = ran
                 facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
                 facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
                 % Korrektur anhand des Subsolarwinkels
-                alpha = dat_SubSol_fix{1}(tt);
+                alpha = dat_SubSol{1}(tt);
                 a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
                 facInc_C = facInc_C + a_c;
                 facInc_H = facInc_H + a_c;
@@ -569,18 +564,16 @@ for tt = ran
                 facInc_H = f_UseFixedAlbedo;
             end
             % Leistungsänderung
-            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % NEW, Internal component, does not receive albedo
+            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
                 P_C = 0;
                 P_H = 0;
             else % Not internal component, receives albedo
                 [normalV(1),normalV(2),normalV(3)] = ...
                     sph2cart(Sat_Struct(ss).azimuth,Sat_Struct(ss).elevation,1);
                 rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol_fix{1}(tt),r,rho); % NEW
-                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol_fix{1}(tt),r,rho); % NEW
+                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol{1}(tt),r,rho);
+                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol{1}(tt),r,rho);
             end
-            %P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C; % OLD
-            %P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H; % OLD
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
             P_H = P_H * (Sat_Struct(ss).size > 0);
