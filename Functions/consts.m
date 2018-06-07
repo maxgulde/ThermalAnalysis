@@ -1,7 +1,6 @@
 % Natural constants
 eV = 1.60217657e-19;        % electron volt                 [J]
 c = 299792458;              % speed of light                [m/s]
-pi = 3.14159265359;         % warm, with apples
 hbar = 1.05457173e-34;      % reduced Plancks constant      [m^2 kg / s]
 hpc = 6.626070040e-34;      % Planck constant               [m^2 kg / s]
 kb = 1.3806488e-23;         % Boltzmann constant            [J/K]
