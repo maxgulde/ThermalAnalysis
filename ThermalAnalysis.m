@@ -139,7 +139,7 @@ fstrDateOut = '%.0f %s %.0f %02.0f:%02.0f:%02.0f';
 fstrDate = 'dd mmm yyyy HH:MM:SS';
 fstrCmp = '%s %d %f %f';
 fstrMat = '%s %f %f %f';
-fstrStr = '%s %s %s %f %f %s';
+fstrStr = '%s %s %s %f %f %s %f %f';
 fstrSubSol = '%d %s %d %12s,%f,%f,%f,%f';
 fstrOrder = '%s %s %s %s';
 fstrTCo = '%s %s %f %f %f';
@@ -156,8 +156,6 @@ t_DaySec = 24*3600;
 consts;
 clearConstants = true;
 r = (RE)/(RE+Alt*1e3);
-%%%%%% CONSTANT RHO TEST
-rho = 140;
 
 % maximaler Subsolarwinkel für Albedo
 AlbMaxAngle = 100; % [deg] NEW (albedo formula depends on cos(0.9*theta)^1.5, complex numbers above 100 deg
@@ -239,6 +237,8 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         Sat_Struct(ii).size = dat{4}(ii);
         Sat_Struct(ii).mass = dat{5}(ii);
         Sat_Struct(ii).cmp = strsplit(dat{6}{ii},',');
+        Sat_Struct(ii).azimuth = dat{7}(ii);
+        Sat_Struct(ii).elevation = dat{8}(ii);
         % Position in Flächendatei
         Sat_Struct(ii).AFileIdx = find(strcmp(dat_Order{:},Sat_Struct(ii).name));
         if (isempty(Sat_Struct(ii).AFileIdx))
@@ -373,6 +373,13 @@ for tt = ran
     % aktuelle Zeit
     t_Now = (count - 1) * t_Res * t_Step;
     count = count + 1;
+    
+    % Earth angles
+    %azEarth = dat_EarthAngles{1}(tt); % NEW
+    %elEarth = dat_EarthAngles{2}(tt); % NEW
+    [localZenith(1),localZenith(2),localZenith(3)] = ...
+        sph2cart(dat_EarthAngles{1}(tt),dat_EarthAngles{2}(tt),1); % NEW, Negative of the vector that points towards the Earth
+    localZenith = - localZenith;
     % % % (A) Isolierte Betrachtung
     for ss = f_IncludedParts
         
@@ -562,8 +569,16 @@ for tt = ran
                 facInc_H = f_UseFixedAlbedo;
             end
             % Leistungsänderung
-            P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol_fix{1}(tt),r,rho); % NEW
-            P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol_fix{1}(tt),r,rho); % NEW
+            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % NEW, Internal component, does not receive albedo
+                P_C = 0;
+                P_H = 0;
+            else % Not internal component, receives albedo
+                [normalV(1),normalV(2),normalV(3)] = ...
+                    sph2cart(Sat_Struct(ss).azimuth,Sat_Struct(ss).elevation,1);
+                rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol_fix{1}(tt),r,rho); % NEW
+                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol_fix{1}(tt),r,rho); % NEW
+            end
             %P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C; % OLD
             %P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H; % OLD
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0

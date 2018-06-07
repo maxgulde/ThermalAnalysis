@@ -4,45 +4,45 @@
 % Fl‰chen: nach auﬂen gerichtetet Oberfl‰che, "Flaeche = 0" ist unsichtbar f¸r Sonne und Erde
 % letztes Update: 2017-07-13 von Max
 % Solarpanele
-% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten
-SolarCellsC		AZUR			Germanium		0.0483			0.060			NA
-SolarCellsR		AZUR			Germanium		0.0483			0.060			NA
-SolarCellsL		AZUR			Germanium		0.0483			0.060			NA
-SPanelFrontC	MAP_SG121FD		FR_4_AlCore		0.0265			0.150			NA	
-SPanelFrontR	MAP_SG121FD		FR_4			0.0758			0.120			NA	
-SPanelFrontL	MAP_SG121FD		FR_4			0.0758			0.120			NA	
-SPanelBackR		MAP_SG121FD		Aluminium		0.00775			0.040			NA
-SPanelBackL		MAP_SG121FD		Aluminium		0.00775			0.040			NA
+% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten		Norm Az [deg]	Norm El [deg]
+SolarCellsC		AZUR			Germanium		0.0483			0.060			NA				270				0
+SolarCellsR		AZUR			Germanium		0.0483			0.060			NA				270				0
+SolarCellsL		AZUR			Germanium		0.0483			0.060			NA				270				0
+SPanelFrontC	MAP_SG121FD		FR_4_AlCore		0.0265			0.150			NA				270				0
+SPanelFrontR	MAP_SG121FD		FR_4			0.0758			0.120			NA				270				0
+SPanelFrontL	MAP_SG121FD		FR_4			0.0758			0.120			NA				270				0
+SPanelBackR		MAP_SG121FD		Aluminium		0.00775			0.040			NA				90				0
+SPanelBackL		MAP_SG121FD		Aluminium		0.00775			0.040			NA				90				0
 % Struktur
-Panel_+X		MAP_AQ_PUK_60u	Aluminium		0.0650			0.351			NA
-Panel_-X		MAP_AQ_PUK_60u	Aluminium		0.0650			0.351			NA
-Panel_+Y		NA				Aluminium		0.0				0.180			NA
-Panel_-Y		MAP_AQ_PUK_60u	Aluminium		0.0581			0.314			NA		
-Panel_+Z		MAP_SG121FD		Aluminium		0.0351			0.190			NA
-Panel_-Z		MAP_AQ_PUK_60u	Aluminium		0.0511			0.276			NA	
-Radiator		MAP_SG121FD		Aluminium		0.0150			0.334			NA
-%Radiator		Aluminium		Aluminium		0.0025			0.04			NA
-%Radiator		MAP_SG121FD		Aluminium		0				0				NA
+Panel_+X		MAP_AQ_PUK_60u	Aluminium		0.0650			0.351			NA				0				0
+Panel_-X		MAP_AQ_PUK_60u	Aluminium		0.0650			0.351			NA				180				0
+Panel_+Y		NA				Aluminium		0.0				0.180			NA				90				0
+Panel_-Y		MAP_AQ_PUK_60u	Aluminium		0.0581			0.314			NA				270				0
+Panel_+Z		MAP_SG121FD		Aluminium		0.0351			0.190			NA				0				90
+Panel_-Z		MAP_AQ_PUK_60u	Aluminium		0.0511			0.276			NA				0				-90
+Radiator		MAP_SG121FD		Aluminium		0.0150			0.334			NA				90				0
+%Radiator		Aluminium		Aluminium		0.0025			0.04			NA				
+%Radiator		MAP_SG121FD		Aluminium		0				0				NA				
 % Komponenten mit Auﬂenfl‰chen
-% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten
-ObjHercules		MAP_SG121FD		Steel			0.009275		1.060			NA
-ObjADCS			MAP_SG121FD		Aluminium		0.00195			0.03			NA
-ObjVisCam		MAP_SG121FD		Steel			0.001245		0.1				NA
-XBandAntenna	Aluminium		Aluminium		0.005476		0.1				NA
-UHFAntenna		Aluminium	 	Steel			0.0023			0.007			NA
-RadDetector		Aluminium		FR_4			0.010000		0.1				NA
+% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten		Norm Az [deg]	Norm El [deg]
+ObjHercules		MAP_SG121FD		Steel			0.009275		1.060			NA				0				90
+ObjADCS			MAP_SG121FD		Aluminium		0.00195			0.03			NA				90				0
+ObjVisCam		MAP_SG121FD		Steel			0.001245		0.1				NA				0				90
+XBandAntenna	Aluminium		Aluminium		0.005476		0.1				NA				0				90
+UHFAntenna		Aluminium	 	Steel			0.0023			0.007			NA				0				90
+RadDetector		Aluminium		FR_4			0.010000		0.1				NA				180				0
 % Komponenten ohne Auﬂenfl‰chen
-% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten
-OptBench		NA				Aluminium		0				1.021			NA
-BAT				NA				Aluminium		0				1.0				BAT
-EPS				NA				FR_4			0				0.233			EPS
-OBC/GPS			NA				FR_4			0				0.1				OBC
-Backplane		NA				FR_4			0				0.2				NA
-RadCNTRL		NA				FR_4			0				0.2				RadDetect
-DPU				NA				FR_4			0				0.25			DPU
-XBandCNTRL		NA				FR_4			0				0.2				XCOM
-ADCS			NA				FR_4			0				0.94			ADCS
-CamIR			NA				Steel			0				0.8				CamIR
-CamVis			NA				Steel			0				0.4				CamVis
-FilterWheel		NA				Aluminium		0				0.411			FilterWheel
-TM/TC			NA				FR_4			0				0.2				TM/TC
+% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten		Norm Az [deg]	Norm El [deg]
+OptBench		NA				Aluminium		0				1.021			NA				NaN				NaN
+BAT				NA				Aluminium		0				1.0				BAT				NaN				NaN
+EPS				NA				FR_4			0				0.233			EPS				NaN				NaN
+OBC/GPS			NA				FR_4			0				0.1				OBC				NaN				NaN
+Backplane		NA				FR_4			0				0.2				NA				NaN				NaN
+RadCNTRL		NA				FR_4			0				0.2				RadDetect		NaN				NaN
+DPU				NA				FR_4			0				0.25			DPU				NaN				NaN
+XBandCNTRL		NA				FR_4			0				0.2				XCOM			NaN				NaN
+ADCS			NA				FR_4			0				0.94			ADCS			NaN				NaN
+CamIR			NA				Steel			0				0.8				CamIR			NaN				NaN
+CamVis			NA				Steel			0				0.4				CamVis			NaN				NaN
+FilterWheel		NA				Aluminium		0				0.411			FilterWheel		NaN				NaN
+TM/TC			NA				FR_4			0				0.2				TM/TC			NaN				NaN
