@@ -13,7 +13,7 @@
 
 % Änderungen
 % 2.4
-% - Change #2
+% - Change #3
 % 2.3
 % - kompatibel gemacht zun Sidos Berechnungen für Validierung via Thermal Desktop
 % - Sol_Flux (hot case), fixer Albedowert, Celsius als Einheit, keine Zugriffszeiten, 
