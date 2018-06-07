@@ -1,0 +1,8 @@
+% Extra anfallenden Lasten
+% Start: Anfangszeitpunkt des Lastfalls nach Beginn der Simulation
+% Dauer: Intervall Last aktiv
+% P: zusätzliche Leistung
+% Name		% Start	[s]	% Dauer [s]	% P[W]
+%Hercules	0			18000		-13.39
+%Hercules	18000		1000		22
+%DPU			0			360000		-8

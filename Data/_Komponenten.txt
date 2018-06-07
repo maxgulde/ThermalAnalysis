@@ -1,0 +1,14 @@
+% Komponenten mit durchschnittlicher Leistung
+% Modi: 0 = konstante Leistung; 1 = variabel, über Zugriffszeiten
+% Name				Modus	Aktiv [W]	Ruhend [W]
+CamIR				0		13.39		0
+CamVis				0		3			0
+FilterWheel			0		3.0			0
+DPU					0		6.5			0
+BAT					0		0.0			0
+RadDetect			0		0.1			0
+EPS					0		0.128		0
+TM/TC				1		3.2			0
+XCOM				1		10.0		0
+OBC					0		0.132		0
+ADCS				0		2.5			0

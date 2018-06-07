@@ -49,9 +49,9 @@ t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
 % % % Pfade
-d_Bas = 'U:\3 Plattform\Thermal\ERNSTModell\';
+d_Bas = 'Data\';
 d_Dat = [d_Bas 'ERNST_i97_a500_r00_t120_stiff\'];
-d_Par = 'U:\3 Plattform\Thermal\ERNSTModell\';
+d_Par = 'Data\';
 d_Cmp = [d_Par '_Komponenten.txt'];
 d_Mat = [d_Par '_Materialien.txt'];
 d_Sur = [d_Par '_Struktur.txt'];

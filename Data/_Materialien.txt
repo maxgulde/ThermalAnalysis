@@ -1,0 +1,28 @@
+% Materialdatenbank (siehe "Spacecraft Thermal Control Handbook", Tab. 4.1 und http://www.engineeringtoolbox.com/specific-heat-capacity-d_391.html)
+% abs: Absorption im solaren Spektrum
+% emi: Emission im IR
+% hcap: spez. Wärmekapazität [J/kg K]
+% Oberflächen brauchen nur abs und emi, Volumina nur hcap
+% Name			abs		emi		hcap
+Aluminium		0.13	0.07	897
+Steel			0.42	0.11	502
+Al_Anodyzed		0.65	0.82	0
+Germanium		0		0		310
+NA				0		0		0
+% % % MAP-space.com (Frankreich)
+MAP_SG122FD_90u	0.18	0.90	0
+MAP_PSBN_140u	0.15	0.92	0
+MAP_AQ_PUK_60u	0.96	0.88	0
+MAP_SG121FD		0.20	0.88	0
+% % % Sonstiges
+FR_4			0		0		1300
+FR_4_AlCore		0		0		1000
+% % % AZUR - emi Wert geschätzt
+AZUR			0.91	0.85	0
+% % % Acktar
+ACM_Fractal_14u	0.97	0.97	0
+% % % ALT
+VD_Silver		0.04	0.02	0
+Al_Mylar_4u		0.14	0.28	0
+Al_Kapton_2u	0.23	0.24	0
+Al_Polished		0.14	0.03	0

@@ -1,0 +1,80 @@
+% Thermische leitende Verbindungen zwischen den Oberflächen
+% Name, Partner: Name der beiden Oberflächen
+% L: charakteristische Länge, in etwa Mittelpunktsentfernung der beiden Oberflächen
+% A: gemeinsame Querschnittsfläche, über die der Leitungstransport stattfindet
+% C: thermische Wärmeleitfähigkeit
+% 	Fr-4: doi:10.1007/bf02662823.
+% % % Solarpanele % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+SolarCellsL		SPanelFrontL	0.002	0.0483	1
+SolarCellsC		SPanelFrontC	0.002	0.0483	1
+SolarCellsR		SPanelFrontR	0.002	0.0483	1
+SPanelFrontL	SPanelBackL		0.002	0.0005	1
+SPanelFrontR	SPanelBackR     0.002	0.0005	1
+SPanelFrontC	Panel_+X		0.226	0.0006	20
+SPanelFrontC	Panel_-X		0.226	0.0006	20
+SPanelFrontC	Panel_+Z		0.275	0.0004	20
+SPanelFrontC	Panel_-Z		0.275	0.0004	20
+% % % Struktur % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+Panel_-Y		Panel_+X		0.226	0.0006	20
+Panel_-Y		Panel_-X		0.226	0.0006	20
+Panel_-Y		Panel_+Z		0.275	0.0004	20
+Panel_-Y		Panel_-Z		0.275	0.0004	20
+Panel_+Y		Panel_+X		0.226	0.0006	20
+Panel_+Y		Panel_-X		0.226	0.0006	20
+Panel_+Y		Panel_+Z		0.275	0.0004	20
+Panel_+Y		Panel_-Z		0.275	0.0004	20
+Panel_+X        Panel_+Z		0.275	0.0004	20
+Panel_+X        Panel_-Z		0.275	0.0004	20
+Panel_-X        Panel_+Z		0.275	0.0004	20
+Panel_-X        Panel_-Z		0.275	0.0004	20
+OptBench		Panel_+X		0.1		0.0009	20
+OptBench		Panel_-X		0.05	0.0031	20
+OptBench		Panel_-Y		0.05	0.0038	20
+OptBench		Radiator		0.05	0.0055	20
+% % % Externe Komponenten % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+Radiator		Panel_-Y		0.075	0.0010	20
+ObjHercules		Panel_+Z		0.05	0.0002	1
+ObjVisCam		Panel_+Z		0.02	0.0001	1
+ObjADCS			Panel_-Y		0.01	0.00001	1
+XBandAntenna	Panel_+Z		0.037	0.00058	5
+UHFAntenna		Panel_-Y		0.15	0.00001	5
+RadDetector		Panel_+X		0.05	0.0008	1
+% % % Interne Komponenten zu Außenflächen % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+ObjADCS			ADCS			0.01	0.0002	5
+UHFAntenna		TM/TC			0.01	0.00001	5
+ObjVisCam		CamVis			0.05	0.0002	5
+Backplane		Panel_+X		0.05	0.0001	1
+ADCS			Panel_+X		0.05	0.0040	5
+ADCS			Panel_-Y		0.05	0.0040	5
+CamVis			Panel_-X		0.03	0.0002	5
+% % % Interne Komponenten untereinander % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+BAT				EPS				0.04	0.0002	1
+EPS				OBC/GPS			0.04	0.0002	1
+OBC/GPS			Backplane		0.04	0.0002	1
+Backplane		ADCS			0.06	0.0002	1
+Backplane		RadCNTRL		0.04	0.0002	1
+RadCNTRL		DPU				0.04	0.0002	1
+DPU				XBandCNTRL		0.04	0.0002	1
+% % % Komponenten an optische Bank % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+OptBench		ObjHercules		0.01	0.0004	20
+%OptBench		CamIR			0.05	0.0023	5
+OptBench		CamIR			0.05	0.0023	20
+OptBench		FilterWheel		0.05	0.0012	20
+OptBench		ADCS			0.01	0.0017	20
+OptBench		CamVis			0.05	0.0005	20
+OptBench		ObjVisCam		0.01	0.0002	20
+% % % Wärmebrücken an Komponenten % % %
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+Panel_+X		BAT				0.05	0.0005	20
+Panel_+X		EPS				0.05	0.0005	20
+Panel_+X		OBC/GPS			0.05	0.0005	20
+Panel_+X		DPU				0.05	0.0005	20
+Panel_+X		XBandCNTRL		0.05	0.0005	20
+Panel_+X		RadCNTRL		0.05	0.0005	20
+Panel_-X		TM/TC			0.05	0.0005	20
