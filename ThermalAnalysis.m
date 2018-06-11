@@ -45,7 +45,7 @@ Sat_SurfNum = 21;               % Anzahl der Oberflächen wie in Simulation berec
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 0.5/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 4/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
@@ -63,12 +63,12 @@ d_TEx = [d_Par 'Temperatur'];
 d_Suff = '';
 
 % % % Optionen zum Zu- und Abschalten bestimmter Effekt
-f_Sun = 1;      % Sonneneinstrahlung
-f_Cmp = 1;      % Abwärme Komponenten
+f_Sun = 0;      % Sonneneinstrahlung
+f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
-f_EIR = 1;      % Erde IR
+f_EIR = 0;      % Erde IR
 f_Emi = 1;      % Emission Oberflächen
-f_TCo = 1;      % Thermische Kopplung
+f_TCo = 0;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
 % f_DrawParts = [1:10 11];
@@ -81,7 +81,7 @@ f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
 % % % Darstellung
-f_FigNum = 5;           % Nummer der figure
+f_FigNum = 2;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
 f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
@@ -534,7 +534,8 @@ for tt = ran
             % Leistungsänderung (emi gibt den Wert der Emission/Absorption im IR an)
             P_C = A * Sat_Mat(sIdx).emi * facInc_C; 
             P_H = A * Sat_Mat(sIdx).emi * facInc_H;
-%             if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
+%             if (isnan(Sat_Struct(ss).azimuth) ||
+%             isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive external radiation
 %                 P_C = 0;
 %                 P_H = 0;
 %             else % Not internal component, receives albedo
@@ -563,10 +564,10 @@ for tt = ran
                 inc_c = 180 - Inc;
             end
 %             if (f_UseFixedAlbedo < 0)
-%                 % Einfluss anhand der Inklination
+%                 Einfluss anhand der Inklination
 %                 facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
 %                 facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-%                 % Korrektur anhand des Subsolarwinkels
+%                 Korrektur anhand des Subsolarwinkels
 %                 alpha = dat_SubSol{1}(tt);
 %                 a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
 %                 facInc_C = facInc_C + a_c;
@@ -575,6 +576,8 @@ for tt = ran
 %                 facInc_C = f_UseFixedAlbedo;
 %                 facInc_H = f_UseFixedAlbedo;
 %             end
+%             P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C;
+%             P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H;
             % Leistungsänderung
             if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
                 P_C = 0;
@@ -684,7 +687,7 @@ fprintf('\n ... fertich.\n');
 %% Plotten der Ergebnisse
     
 fprintf('Ergebnisse zeichnen ...');
-f_DrawParts = [1 4 14 15 22];
+f_DrawParts = [9:14];
 
 figure(f_FigNum);
 if (f_DrawOnTop == 1)
