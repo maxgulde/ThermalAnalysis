@@ -27,7 +27,7 @@
 % clear;
 
 %% Einstellungen
-% Testing ssh
+
 % % % Orbit
 Inc = 97;
 Alt = 500;
