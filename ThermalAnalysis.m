@@ -81,7 +81,7 @@ f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
 % % % Darstellung
-f_FigNum = 2;           % Nummer der figure
+f_FigNum = 5;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
 f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
@@ -382,6 +382,11 @@ for tt = ran
         dP_C = 0;
         dP_H = 0;
         
+        % View Factor for Albedo and Earth IR
+        [normalV(1),normalV(2),normalV(3)] = ...
+            sph2cart(Sat_Struct(ss).azimuth,Sat_Struct(ss).elevation,1);
+        vF = viewFactor(r,rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith))));
+        
         % Index der Komponente in Flächendatei
         cIdx = Sat_Struct(ss).AFileIdx;
         % Wenn interne Struktur, dann auf -1 setzen
@@ -527,8 +532,15 @@ for tt = ran
             facInc_C = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
             facInc_H = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
             % Leistungsänderung (emi gibt den Wert der Emission/Absorption im IR an)
-            P_C = A * Sat_Mat(sIdx).emi * facInc_C;
+            P_C = A * Sat_Mat(sIdx).emi * facInc_C; 
             P_H = A * Sat_Mat(sIdx).emi * facInc_H;
+%             if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
+%                 P_C = 0;
+%                 P_H = 0;
+%             else % Not internal component, receives albedo
+%                 P_C = A * Sat_Mat(sIdx).emi * 240 * vF;
+%                 P_H = P_C;
+%             end
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
             P_H = P_H * (Sat_Struct(ss).size > 0);
@@ -550,29 +562,26 @@ for tt = ran
             if(Inc > 90)
                 inc_c = 180 - Inc;
             end
-            if (f_UseFixedAlbedo < 0)
-                % Einfluss anhand der Inklination
-                facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-                facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-                % Korrektur anhand des Subsolarwinkels
-                alpha = dat_SubSol{1}(tt);
-                a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
-                facInc_C = facInc_C + a_c;
-                facInc_H = facInc_H + a_c;
-            else
-                facInc_C = f_UseFixedAlbedo;
-                facInc_H = f_UseFixedAlbedo;
-            end
+%             if (f_UseFixedAlbedo < 0)
+%                 % Einfluss anhand der Inklination
+%                 facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+%                 facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+%                 % Korrektur anhand des Subsolarwinkels
+%                 alpha = dat_SubSol{1}(tt);
+%                 a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
+%                 facInc_C = facInc_C + a_c;
+%                 facInc_H = facInc_H + a_c;
+%             else
+%                 facInc_C = f_UseFixedAlbedo;
+%                 facInc_H = f_UseFixedAlbedo;
+%             end
             % Leistungsänderung
             if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
                 P_C = 0;
                 P_H = 0;
             else % Not internal component, receives albedo
-                [normalV(1),normalV(2),normalV(3)] = ...
-                    sph2cart(Sat_Struct(ss).azimuth,Sat_Struct(ss).elevation,1);
-                rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol{1}(tt),r,rho);
-                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol{1}(tt),r,rho);
+                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol{1}(tt),vF);
+                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol{1}(tt),vF);
             end
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
