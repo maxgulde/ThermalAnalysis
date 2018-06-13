@@ -66,8 +66,8 @@ d_Suff = '';
 f_Sun = 0;      % Sonneneinstrahlung
 f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
-f_EIR = 0;      % Erde IR
-f_Emi = 1;      % Emission Oberflächen
+f_EIR = 1;      % Erde IR
+f_Emi = 0;      % Emission Oberflächen
 f_TCo = 0;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
@@ -152,7 +152,9 @@ t_DaySec = 24*3600;
 % Physikalische Konstanten
 consts;
 clearConstants = true;
-r = (RE)/(RE+Alt*1e3);
+re = 6371000;
+r = (re)/(re+700*1e3); % Testing
+%r = (RE)/(RE+Alt*1e3);
 
 % maximaler Subsolarwinkel für Albedo
 AlbMaxAngle = 100; % [deg] (Above 100 deg the formula generates complex numbers)
@@ -372,7 +374,7 @@ for tt = ran
     
     % Local zenith
     [localZenith(1),localZenith(2),localZenith(3)] = ...
-        sph2cart(dat_EarthAngles{1}(tt),dat_EarthAngles{2}(tt),1);
+        sph2cart(deg2rad(dat_EarthAngles{1}(tt)),deg2rad(dat_EarthAngles{2}(tt)),1);
     localZenith = - localZenith; % Negative of the vector that points towards the Earth
     
     % % % (A) Isolierte Betrachtung
@@ -384,7 +386,7 @@ for tt = ran
         
         % View Factor for Albedo and Earth IR
         [normalV(1),normalV(2),normalV(3)] = ...
-            sph2cart(Sat_Struct(ss).azimuth,Sat_Struct(ss).elevation,1);
+            sph2cart(deg2rad(Sat_Struct(ss).azimuth),deg2rad(Sat_Struct(ss).elevation),1);
         vF = viewFactor(r,rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith))));
         
         % Index der Komponente in Flächendatei
@@ -522,7 +524,7 @@ for tt = ran
             if (cIdx >= 0)
                 A = dat_AreaE{1,cIdx}(tt);
             else
-                A = 0;
+                A = Sat_Struct(ss).size; %% CHECK IF THIS IS RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
             % Korrektur um Inklination
             inc_c = Inc;
@@ -532,16 +534,13 @@ for tt = ran
             facInc_C = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
             facInc_H = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
             % Leistungsänderung (emi gibt den Wert der Emission/Absorption im IR an)
-            P_C = A * Sat_Mat(sIdx).emi * facInc_C; 
-            P_H = A * Sat_Mat(sIdx).emi * facInc_H;
-%             if (isnan(Sat_Struct(ss).azimuth) ||
-%             isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive external radiation
-%                 P_C = 0;
-%                 P_H = 0;
-%             else % Not internal component, receives albedo
-%                 P_C = A * Sat_Mat(sIdx).emi * 240 * vF;
-%                 P_H = P_C;
-%             end
+            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
+                P_C = 0;
+                P_H = 0;
+            else % No internal component, receives albedo
+                P_C = A * Sat_Mat(sIdx).emi * facInc_C .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
+                P_H = A * Sat_Mat(sIdx).emi * facInc_H .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
+            end
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
             P_H = P_H * (Sat_Struct(ss).size > 0);
@@ -556,35 +555,36 @@ for tt = ran
             if (cIdx >= 0)
                 A = dat_AreaE{1,cIdx}(tt);
             else
-                A = 0;
+                A = Sat_Struct(ss).size; %% CHECK IF THIS IS RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
             % Korrektur um Inklination für SSO
             inc_c = Inc;
             if(Inc > 90)
                 inc_c = 180 - Inc;
             end
-%             if (f_UseFixedAlbedo < 0)
-%                 Einfluss anhand der Inklination
-%                 facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-%                 facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-%                 Korrektur anhand des Subsolarwinkels
-%                 alpha = dat_SubSol{1}(tt);
-%                 a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
-%                 facInc_C = facInc_C + a_c;
-%                 facInc_H = facInc_H + a_c;
-%             else
-%                 facInc_C = f_UseFixedAlbedo;
-%                 facInc_H = f_UseFixedAlbedo;
-%             end
-%             P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1) * facInc_C;
-%             P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2) * facInc_H;
+            if (f_UseFixedAlbedo < 0)
+                %Einfluss anhand der Inklination
+                facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+                facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+                %Korrektur anhand des Subsolarwinkels
+                alpha = dat_SubSol{1}(tt);
+                a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
+                facInc_C = facInc_C + a_c;
+                facInc_H = facInc_H + a_c;
+            else
+                facInc_C = f_UseFixedAlbedo;
+                facInc_H = f_UseFixedAlbedo;
+            end
+            % Compute Albedo flux
+            AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C,dat_SubSol{1}(tt),vF);
+            AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H,dat_SubSol{1}(tt),vF);
             % Leistungsänderung
             if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
                 P_C = 0;
                 P_H = 0;
-            else % Not internal component, receives albedo
-                P_C = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(1),dat_SubSol{1}(tt),vF);
-                P_H = A * Sat_Mat(sIdx).abs * albedoSolarFlux(Sol_Flux(2),dat_SubSol{1}(tt),vF);
+            else % No internal component, receives albedo
+                P_C = A * Sat_Mat(sIdx).abs * AlbedoFlux_C;
+                P_H = A * Sat_Mat(sIdx).abs * AlbedoFlux_H;
             end
             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
             P_C = P_C * (Sat_Struct(ss).size > 0);
