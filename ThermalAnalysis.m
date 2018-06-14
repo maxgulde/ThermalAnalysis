@@ -10,6 +10,7 @@
 
 % todo
 % - ViewFactors einbetten für Aussenflächen in ThermoSim
+% - Implement Earth view factor determination (self-shadow)
 
 % Änderungen
 % 2.4
@@ -551,12 +552,8 @@ for tt = ran
         
         % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
         if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
-            % Fläche aus Sicht der Erde
-            if (cIdx >= 0)
-                A = dat_AreaE{1,cIdx}(tt);
-            else
-                A = Sat_Struct(ss).size; %% CHECK IF THIS IS RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            end
+            % Fläche %%%%%%%%%% nicht aus Sicht der Erde
+            A = Sat_Struct(ss).size;
             % Korrektur um Inklination für SSO
             inc_c = Inc;
             if(Inc > 90)
