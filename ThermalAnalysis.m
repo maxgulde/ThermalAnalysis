@@ -505,11 +505,11 @@ for tt = ran
         % % % (3) IR Abstrahlung des Satelliten
         if (f_Emi == 1)
             % Fläche * Emissivität
-            if (cIdx >= 0)
+%             if (cIdx >= 0)
                 A = Sat_Struct(ss).size;
-            else
-                A = 0;
-            end
+%             else
+%                 A = 0;
+%             end
             % Radiator hat strukturierte Oberfläche
             if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
                 A = A * Sat_RadEffArea;              
@@ -521,12 +521,8 @@ for tt = ran
         
         % % % (4) Erde IR
         if (f_EIR == 1)
-            % Fläche aus Sicht der Erde
-            if (cIdx >= 0)
-                A = dat_AreaE{1,cIdx}(tt);
-            else
-                A = Sat_Struct(ss).size; %% CHECK IF THIS IS RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            end
+            % Fläche
+            A = Sat_Struct(ss).size;
             % Korrektur um Inklination
             inc_c = Inc;
             if(Inc > 90)
@@ -542,9 +538,6 @@ for tt = ran
                 P_C = A * Sat_Mat(sIdx).emi * facInc_C .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
                 P_H = A * Sat_Mat(sIdx).emi * facInc_H .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
             end
-            % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
-            P_C = P_C * (Sat_Struct(ss).size > 0);
-            P_H = P_H * (Sat_Struct(ss).size > 0);
             % Energieänderung
             dP_C = dP_C + P_C;
             dP_H = dP_H + P_H;
@@ -552,7 +545,7 @@ for tt = ran
         
         % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
         if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
-            % Fläche %%%%%%%%%% nicht aus Sicht der Erde
+            % Fläche
             A = Sat_Struct(ss).size;
             % Korrektur um Inklination für SSO
             inc_c = Inc;
