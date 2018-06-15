@@ -50,13 +50,13 @@ t_Range = [0 4/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
-% % % Pfade
+% % % Paths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Testing simple cube sat
 d_Bas = 'Data\';
 d_Dat = [d_Bas 'ERNST_i97_a500_r00_t120_stiff\'];
 d_Par = 'Data\';
 d_Cmp = [d_Par '_Komponenten.txt'];
-d_Mat = [d_Par '_Materialien.txt'];
-d_Sur = [d_Par '_Struktur.txt'];
+d_Mat = [d_Par 'new_materials.txt'];
+d_Sur = [d_Par 'new_structure.txt'];
 d_TCo = [d_Par '_Waermeleitung.txt'];
 d_XLo = [d_Par '_XLoads.txt'];
 d_TEx = [d_Par 'Temperatur'];
@@ -583,9 +583,6 @@ for tt = ran
                 P_C = A * Sat_Mat(sIdx).abs * AlbedoFlux_C;
                 P_H = A * Sat_Mat(sIdx).abs * AlbedoFlux_H;
             end
-            % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
-            P_C = P_C * (Sat_Struct(ss).size > 0);
-            P_H = P_H * (Sat_Struct(ss).size > 0);
             % Leistungszuwachs
             dP_C = dP_C + P_C;
             dP_H = dP_H + P_H;
@@ -684,7 +681,7 @@ fprintf('\n ... fertich.\n');
 %% Plotten der Ergebnisse
     
 fprintf('Ergebnisse zeichnen ...');
-f_DrawParts = [9:14];
+f_DrawParts = 1:7;
 
 figure(f_FigNum);
 if (f_DrawOnTop == 1)
