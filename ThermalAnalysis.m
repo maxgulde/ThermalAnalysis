@@ -424,31 +424,6 @@ for tt = ran
             bIdx = 1;
         end
         
-        % % % (1) Direktes Sonnenlicht
-        %         if (f_Sun == 1)
-        %             % Fläche
-        %             if (cIdx >= 0)
-        %                 A = dat_AreaS{1,cIdx}(tt);
-        %             else
-        %                 A = 0;
-        %             end
-        %             % geringerer Energieeingang für Solarzellen
-        %             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
-        %                 A = A * (1 - Sat_CellEff);
-        %             end
-        %             % cold case
-        %             % aufgenommene Leistung
-        %             P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1);
-        %             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
-        %             P_C = P_C * (Sat_Struct(ss).size > 0);
-        %             % hot case
-        %             P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2);
-        %             P_H = P_H * (Sat_Struct(ss).size > 0);
-        %             % Zuwachs
-        %             dP_C = dP_C + P_C;
-        %             dP_H = dP_H + P_H;
-        %         end
-        
         % % % (1) Direct Sunlight (v2)
         if (f_Sun == 1)
             % Fläche
@@ -538,23 +513,6 @@ for tt = ran
             dP_C = dP_C + P;
             dP_H = dP_H + P;
         end
-        
-        %         % % % (3) IR Abstrahlung des Satelliten
-        %         if (f_Emi == 1)
-        %             % Fläche * Emissivität
-        % %             if (cIdx >= 0)
-        %                 A = Sat_Struct(ss).size; %%%%%%%%%%%%%% MAKE SURE TO IGNORE INTERNAL COMPONENTS!!!
-        % %             else
-        % %                 A = 0;
-        % %             end
-        %             % Radiator hat strukturierte Oberfläche
-        %             if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
-        %                 A = A * Sat_RadEffArea;
-        %             end
-        %             % Leistungsänderung
-        %             dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
-        %             dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
-        %         end
         
         % % % (3) IR Emission of the Satellite (v2, including internal radiation)
         if (f_Emi == 1)
