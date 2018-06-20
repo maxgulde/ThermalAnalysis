@@ -69,7 +69,7 @@ f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
 f_EIR = 1;      % Erde IR
 f_Emi = 1;      % Emission Oberflächen
-f_TCo = 0;      % Thermische Kopplung
+f_TCo = 1;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
 % f_DrawParts = [1:10 11];
@@ -526,9 +526,9 @@ for tt = ran
             end
             
             for pp = f_IncludedParts
-                if ss == 1 || ss == 2 || ss == 3
-                    continue;
-                end
+%                 if ss == 1 || ss == 2 || ss == 3
+%                     continue;
+%                 end
                 if ss == pp % Object is itself, radiate power
                     % Change in incoming power
                     dP_C = dP_C - ksb * T(1,ss,tt)^4 * A * ss_emi;

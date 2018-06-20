@@ -1,0 +1,29 @@
+% Thermische leitende Verbindungen zwischen den Oberflächen
+% Name, Partner: Name der beiden Oberflächen
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
+Panel_XP		Panel_YP		0.0025	0.001	1
+Panel_XP		Panel_YM		0.0025	0.001	1
+Panel_XP		Panel_ZP		0.0025	0.001	1
+Panel_XP		Panel_ZM		0.0025	0.001	1
+Panel_XM		Panel_YP		0.0025	0.001	1
+Panel_XM		Panel_YM		0.0025	0.001	1
+Panel_XM		Panel_ZP		0.0025	0.001	1
+Panel_XM		Panel_ZM		0.0025	0.001	1
+Panel_YP		Panel_ZP		0.0025	0.001	1
+Panel_YP		Panel_ZM		0.0025	0.001	1
+Panel_YM		Panel_ZP		0.0025	0.001	1
+Panel_YM		Panel_ZM		0.0025	0.001	1
+Panel_ZP		Payload_out		0.05	0.00157	1
+Panel_ZM		Bench			0.0025	0.0324	1
+Bench			Electronics		0.025	0.0324	0.05
+Payload_out		Electronics		0.025	0.0324	0.005
+
+%	Panel_XP		Al_Anodyzed		Aluminium		0.0441			0.54			NA				0				0
+%	Panel_XM		Al_Anodyzed		Aluminium		0.0441			0.54			NA				180				0
+%	Panel_YP		Al_Anodyzed		Aluminium		0.0441			0.54			NA				90				0
+%	Panel_YM		AZUR			Aluminium		0.0441			0.54			NA				270				0
+%	Panel_ZP		Al_Anodyzed		Aluminium		0.036246018		0.489			NA				0				90
+%	Panel_ZM		Al_Anodyzed		Aluminium		0.0441			0.54			NA				0				-90	
+%	Payload_out		Steel			Steel			0.007853982		6.474			NA				0				90
+%	Bench			NA				NA				0.00000001		0.01			NA				NaN				NaN
+%	Electronics	
