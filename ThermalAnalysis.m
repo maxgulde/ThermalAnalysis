@@ -46,7 +46,7 @@ Sat_SurfNum = 21;               % Anzahl der Oberflächen wie in Simulation berec
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 4/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 2/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
@@ -64,12 +64,12 @@ d_TEx = [d_Par 'Temperatur'];
 d_Suff = '';
 
 % % % Optionen zum Zu- und Abschalten bestimmter Effekt
-f_Sun = 0;      % Sonneneinstrahlung
+f_Sun = 1;      % Sonneneinstrahlung
 f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
 f_EIR = 1;      % Erde IR
-f_Emi = 0;      % Emission Oberflächen
-f_TCo = 1;      % Thermische Kopplung
+f_Emi = 1;      % Emission Oberflächen
+f_TCo = 0;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
 % f_DrawParts = [1:10 11];
@@ -188,6 +188,7 @@ if (f_ReloadAllData == 1)
     % % Subsolarwinkel
     fprintf(' ... Subsolarwinkel ...\n');
     dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
+    dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev
     dat_SubSol = dat_temp(end);
     
     % % Local Zenith
@@ -305,14 +306,15 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         %             Sat_TCo{idx1,idx2} = s;
         %             Sat_TCo{idx2,idx1} = s;
         %         end
-        fprintf(' ... Internal Radiation TESTING ...\n');
-        fid = fopen([d_Par 'matrix.txt']);
-        dat = textscan(fid, '%f %f %f %f %f %f %f %f %f', 'CommentStyle','%');
-        fclose(fid);
-        target_view_factor = zeros(9);
-        for iii = 1:9
-            target_view_factor(:,iii) = dat{1,iii};
-        end
+    end
+    
+    fprintf(' ... Internal Radiation TESTING ...\n');
+    fid = fopen([d_Par 'matrix.txt']);
+    dat = textscan(fid, '%f %f %f %f %f %f %f %f %f', 'CommentStyle','%');
+    fclose(fid);
+    internal_vf = zeros(9);
+    for iii = 1:9
+        internal_vf(:,iii) = dat{1,iii};
     end
     
     % % extra Lastfälle
@@ -386,6 +388,10 @@ for tt = ran
         sph2cart(deg2rad(dat_EarthAngles{1}(tt)),deg2rad(dat_EarthAngles{2}(tt)),1);
     localZenith = - localZenith; % Negative of the vector that points towards the Earth
     
+    % Sun vector
+    [sunVector(1),sunVector(2),sunVector(3)] = ...
+        sph2cart(deg2rad(dat_SolAng{1}(tt)),deg2rad(dat_SolAng{2}(tt)),1);
+    
     % % % (A) Isolierte Betrachtung
     for ss = f_IncludedParts
         
@@ -396,7 +402,8 @@ for tt = ran
         % View Factor for Albedo and Earth IR
         [normalV(1),normalV(2),normalV(3)] = ...
             sph2cart(deg2rad(Sat_Struct(ss).azimuth),deg2rad(Sat_Struct(ss).elevation),1);
-        vF = viewFactor(r,rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith))));
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = viewFactor(r,rho);
         
         % Index der Komponente in Flächendatei
         cIdx = Sat_Struct(ss).AFileIdx;
@@ -418,28 +425,47 @@ for tt = ran
         end
         
         % % % (1) Direktes Sonnenlicht
+        %         if (f_Sun == 1)
+        %             % Fläche
+        %             if (cIdx >= 0)
+        %                 A = dat_AreaS{1,cIdx}(tt);
+        %             else
+        %                 A = 0;
+        %             end
+        %             % geringerer Energieeingang für Solarzellen
+        %             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
+        %                 A = A * (1 - Sat_CellEff);
+        %             end
+        %             % cold case
+        %             % aufgenommene Leistung
+        %             P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1);
+        %             % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
+        %             P_C = P_C * (Sat_Struct(ss).size > 0);
+        %             % hot case
+        %             P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2);
+        %             P_H = P_H * (Sat_Struct(ss).size > 0);
+        %             % Zuwachs
+        %             dP_C = dP_C + P_C;
+        %             dP_H = dP_H + P_H;
+        %         end
+        
+        % % % (1) Direktes Sonnenlicht (v2)
         if (f_Sun == 1)
             % Fläche
-            if (cIdx >= 0)
-                A = dat_AreaS{1,cIdx}(tt);
-            else
-                A = 0;
-            end
+            A = Sat_Struct(ss).size;
+            ss_abs = Sat_Mat(sIdx).abs;
+            
             % geringerer Energieeingang für Solarzellen
             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
                 A = A * (1 - Sat_CellEff);
             end
-            % cold case
-            % aufgenommene Leistung
-            P_C = A * Sat_Mat(sIdx).abs * Sol_Flux(1);
-            % wenn nach außen gerichtete Fläche null, dann auch aufgenommene Leistung 0
-            P_C = P_C * (Sat_Struct(ss).size > 0);
-            % hot case
-            P_H = A * Sat_Mat(sIdx).abs * Sol_Flux(2);
-            P_H = P_H * (Sat_Struct(ss).size > 0);
-            % Zuwachs
-            dP_C = dP_C + P_C;
-            dP_H = dP_H + P_H;
+            
+            surf_sun_angle = rad2deg(atan2(norm(cross(normalV,sunVector)), dot(normalV,sunVector)));
+            
+            if surf_sun_angle < 90 || surf_sun_angle > -90
+                dP_C = dP_C + A * ss_abs * Sol_Flux(1) * cosd(surf_sun_angle);
+                dP_H = dP_H + A * ss_abs * Sol_Flux(2) * cosd(surf_sun_angle);
+            end
         end
         
         % % % (2) Komponenten
@@ -510,21 +536,59 @@ for tt = ran
             dP_H = dP_H + P;
         end
         
-        % % % (3) IR Abstrahlung des Satelliten
+        %         % % % (3) IR Abstrahlung des Satelliten
+        %         if (f_Emi == 1)
+        %             % Fläche * Emissivität
+        % %             if (cIdx >= 0)
+        %                 A = Sat_Struct(ss).size; %%%%%%%%%%%%%% MAKE SURE TO IGNORE INTERNAL COMPONENTS!!!
+        % %             else
+        % %                 A = 0;
+        % %             end
+        %             % Radiator hat strukturierte Oberfläche
+        %             if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
+        %                 A = A * Sat_RadEffArea;
+        %             end
+        %             % Leistungsänderung
+        %             dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
+        %             dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
+        %         end
+        
+        % % % (3) IR Emission of the Satellite (v2, including internal radiation)
         if (f_Emi == 1)
-            % Fläche * Emissivität
-%             if (cIdx >= 0)
-                A = Sat_Struct(ss).size; %%%%%%%%%%%%%% MAKE SURE TO IGNORE INTERNAL COMPONENTS!!!
-%             else
-%                 A = 0;
-%             end
-            % Radiator hat strukturierte Oberfläche
+            % Get the area of the radiating (and absorbing) surface
+            A = Sat_Struct(ss).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
+            ss_emi = Sat_Mat(sIdx).emi;
+            
+            % Update area to effective area in case of modified radiator
             if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
-                A = A * Sat_RadEffArea;              
-            end            
-            % Leistungsänderung
-            dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
-            dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * Sat_Mat(sIdx).emi;
+                A = A * Sat_RadEffArea;
+            end
+            
+            for pp = f_IncludedParts
+                if ss == 1 || ss == 2 || ss == 3
+                    continue;
+                end
+                if ss == pp % Object is itself, radiate power
+                    % Change in incoming power
+                    dP_C = dP_C - ksb * T(1,ss,tt)^4 * A * ss_emi;
+                    dP_H = dP_H - ksb * T(2,ss,tt)^4 * A * ss_emi;
+                else % Object is another surface, use view factor
+                    pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
+                    pp_emi = Sat_Mat(pIdx).emi;
+                    A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
+                    
+                    % Internal view factor (emitter, receiver)
+                    % Change in incoming power
+                    dP_C = dP_C + ksb * T(1,ss,tt)^4 * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+                    dP_H = dP_H + ksb * T(2,ss,tt)^4 * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+                end
+            end
+            
+            % If external surface, radiate to the outside
+            if ~isnan(Sat_Struct(ss).azimuth) % External surfaces have a non NaN azimuth angle
+                dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * ss_emi;
+                dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * ss_emi;
+            end
         end
         
         % % % (4) Erde IR
@@ -614,38 +678,38 @@ for tt = ran
     if (f_TCo == 1)
         % alle betrachteten Strukturen
         for ss = f_IncludedParts
-            sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surf));
-            targ_emi = Sat_Mat(sIdx).emi;
-            
-            dP_C = 0;
-            dP_H = 0;
-            for pp = f_IncludedParts %%%%%%%% SUBSTRACT SOMETHING FROM T()^4???
-                % Remove self rad, add incoming rad (only taking into accound internal sides)
-                if ss == pp
-                    dP_C = dP_C - ksb * T(1,pp,tt)^4 * Sat_Struct(pp).size * targ_emi;
-                    dP_H = dP_H - ksb * T(2,pp,tt)^4 * Sat_Struct(pp).size * targ_emi;
-                else
-                    pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
-                    A_emi = Sat_Struct(pp).size;
-                    source_emi = Sat_Mat(pIdx).emi;
-                    dP_C = dP_C + target_view_factor(pp,ss) * ksb * T(1,pp,tt)^4 * A_emi * source_emi * targ_emi;
-                    dP_H = dP_H + target_view_factor(pp,ss) * ksb * T(2,pp,tt)^4 * A_emi * source_emi * targ_emi;
-                end
-            end
-            E_C = dP_C * (t_Res * t_Step);
-            E_H = dP_H * (t_Res * t_Step);
-            
-            % Umrechnen in Temperaturänderung
-            dT_C = E_C / (Sat_Mat(sIdx).cap * Sat_Struct(ss).mass);
-            dT_H = E_H / (Sat_Mat(sIdx).cap * Sat_Struct(ss).mass);
-            T(1,ss,tt+t_Step) = T(1,ss,tt+t_Step) + dT_C;
-            T(2,ss,tt+t_Step) = T(2,ss,tt+t_Step) + dT_H;
-            % Negative Temperaturen verhindern
-            for ii = 1:2
-                if (T(ii,ss,tt+t_Step) < T_Space)
-                    T(ii,ss,tt+t_Step) = T_Space;
-                end
-            end
+%             sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surf));
+%             targ_emi = Sat_Mat(sIdx).emi;
+%             
+%             dP_C = 0;
+%             dP_H = 0;
+%             for pp = f_IncludedParts
+%                 % Remove self rad, add incoming rad (only taking into accound internal sides)
+%                 if ss == pp
+%                     dP_C = dP_C - ksb * T(1,pp,tt)^4 * Sat_Struct(pp).size * targ_emi;
+%                     dP_H = dP_H - ksb * T(2,pp,tt)^4 * Sat_Struct(pp).size * targ_emi;
+%                 else
+%                     pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
+%                     A_emi = Sat_Struct(pp).size;
+%                     source_emi = Sat_Mat(pIdx).emi;
+%                     dP_C = dP_C + target_view_factor(pp,ss) * ksb * T(1,pp,tt)^4 * A_emi * source_emi * targ_emi;
+%                     dP_H = dP_H + target_view_factor(pp,ss) * ksb * T(2,pp,tt)^4 * A_emi * source_emi * targ_emi;
+%                 end
+%             end
+%             E_C = dP_C * (t_Res * t_Step);
+%             E_H = dP_H * (t_Res * t_Step);
+%             
+%             % Umrechnen in Temperaturänderung
+%             dT_C = E_C / (Sat_Mat(sIdx).cap * Sat_Struct(ss).mass);
+%             dT_H = E_H / (Sat_Mat(sIdx).cap * Sat_Struct(ss).mass);
+%             T(1,ss,tt+t_Step) = T(1,ss,tt+t_Step) + dT_C;
+%             T(2,ss,tt+t_Step) = T(2,ss,tt+t_Step) + dT_H;
+%             % Negative Temperaturen verhindern
+%             for ii = 1:2
+%                 if (T(ii,ss,tt+t_Step) < T_Space)
+%                     T(ii,ss,tt+t_Step) = T_Space;
+%                 end
+%             end
             %             % finde Index, nur ab dort
             %             idx = find(f_IncludedParts == ss);
             %             % nur solche Strukturen, die auch simuliert werden
@@ -655,49 +719,49 @@ for tt = ran
             %                     continue;
             %                 end
             %
-            %                 %                 % checken, ob Kopplung vorhanden
-            %                 %                 if (Sat_TCo{ss,pp}.Mode == 0)
-            %                 %                     continue;
-            %                 %                 end
-            %                 %                 % Bulk Material Parameter Index
-            %                 %                 bIdx_s = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).bulk));
-            %                 %                 bIdx_p = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).bulk));
-            %                 %                 % Parameter extrahieren
-            %                 %                 m_s = Sat_Struct(ss).mass;
-            %                 %                 m_p = Sat_Struct(pp).mass;
-            %                 %                 hc_s = Sat_Mat(bIdx_s).cap;
-            %                 %                 hc_p = Sat_Mat(bIdx_p).cap;
-            %                 %                 C_s = m_s * hc_s;
-            %                 %                 C_p = m_p * hc_p;
-            %                 %                 dt = t_Res * t_Step;
-            %                 %                 % Zeitskala abschätzen, auf der Temperaturausgleich stattfindet
-            %                 %                 R = Sat_TCo{ss,pp}.Length / (Sat_TCo{ss,pp}.Area * Sat_TCo{ss,pp}.Cond);
-            %                 %                 tau = R * mean([C_s C_p]);
-            %                 %                 t_Ratio = dt / tau;
-            %                 %                 % heißer und kalter Fall
-            %                 %                 for cc = 1:2
-            %                 %                     % schneller Ausgleich -> beide Strukturen haben dieselbe Temperatur
-            %                 %                     if (t_Ratio > t_IntLim(2))
-            %                 %                         T_prime = (C_s * T(cc,ss,tt+t_Step) + C_p * T(cc,pp,tt+t_Step))/(C_s + C_p);
-            %                 %                         T(cc,ss,tt+t_Step) = T_prime;
-            %                 %                         T(cc,pp,tt+t_Step) = T_prime;
-            %                 %                     elseif (t_Ratio < t_IntLim(1)) % langsamer Ausgleich -> lineare Näherung
-            %                 %                         deltaT = T(cc,pp,tt+t_Step) - T(cc,ss,tt+t_Step);
-            %                 %                         T(cc,ss,tt+t_Step) = T(cc,ss,tt+t_Step) + dt/C_s*deltaT/R;
-            %                 %                         T(cc,pp,tt+t_Step) = T(cc,pp,tt+t_Step) - dt/C_p*deltaT/R;
-            %                 %                     else % ungefähr gleiche Zeitskala, runterbrechen
-            %                 %                         dt2 = t_IntLim(1) * dt;
-            %                 %                         for ii = dt2:dt2:dt
-            %                 %                             deltaT = T(cc,pp,tt+t_Step) - T(cc,ss,tt+t_Step);
-            %                 %                             T(cc,ss,tt+t_Step) = T(cc,ss,tt+t_Step) + dt2/C_s*deltaT/R;
-            %                 %                             T(cc,pp,tt+t_Step) = T(cc,pp,tt+t_Step) - dt2/C_p*deltaT/R;
-            %                 %                         end
-            %                 %                     end
-            %                 %                     % Verhältnis von dt zu tau angeben
-            %                 %                     if (f_Verbose == 1 && tt == ran(1) && cc == 1)
-            %                 %                         fprintf('\nWärmeleitung: <%s>, <%s> (dt/tau = %f).',Sat_Struct(ss).name, Sat_Struct(pp).name, t_Res/tau);
-            %                 %                     end
-            %                 %                 end
+            %                 % checken, ob Kopplung vorhanden
+            %                 if (Sat_TCo{ss,pp}.Mode == 0)
+            %                     continue;
+            %                 end
+            %                 % Bulk Material Parameter Index
+            %                 bIdx_s = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).bulk));
+            %                 bIdx_p = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).bulk));
+            %                 % Parameter extrahieren
+            %                 m_s = Sat_Struct(ss).mass;
+            %                 m_p = Sat_Struct(pp).mass;
+            %                 hc_s = Sat_Mat(bIdx_s).cap;
+            %                 hc_p = Sat_Mat(bIdx_p).cap;
+            %                 C_s = m_s * hc_s;
+            %                 C_p = m_p * hc_p;
+            %                 dt = t_Res * t_Step;
+            %                 % Zeitskala abschätzen, auf der Temperaturausgleich stattfindet
+            %                 R = Sat_TCo{ss,pp}.Length / (Sat_TCo{ss,pp}.Area * Sat_TCo{ss,pp}.Cond);
+            %                 tau = R * mean([C_s C_p]);
+            %                 t_Ratio = dt / tau;
+            %                 % heißer und kalter Fall
+            %                 for cc = 1:2
+            %                     % schneller Ausgleich -> beide Strukturen haben dieselbe Temperatur
+            %                     if (t_Ratio > t_IntLim(2))
+            %                         T_prime = (C_s * T(cc,ss,tt+t_Step) + C_p * T(cc,pp,tt+t_Step))/(C_s + C_p);
+            %                         T(cc,ss,tt+t_Step) = T_prime;
+            %                         T(cc,pp,tt+t_Step) = T_prime;
+            %                     elseif (t_Ratio < t_IntLim(1)) % langsamer Ausgleich -> lineare Näherung
+            %                         deltaT = T(cc,pp,tt+t_Step) - T(cc,ss,tt+t_Step);
+            %                         T(cc,ss,tt+t_Step) = T(cc,ss,tt+t_Step) + dt/C_s*deltaT/R;
+            %                         T(cc,pp,tt+t_Step) = T(cc,pp,tt+t_Step) - dt/C_p*deltaT/R;
+            %                     else % ungefähr gleiche Zeitskala, runterbrechen
+            %                         dt2 = t_IntLim(1) * dt;
+            %                         for ii = dt2:dt2:dt
+            %                             deltaT = T(cc,pp,tt+t_Step) - T(cc,ss,tt+t_Step);
+            %                             T(cc,ss,tt+t_Step) = T(cc,ss,tt+t_Step) + dt2/C_s*deltaT/R;
+            %                             T(cc,pp,tt+t_Step) = T(cc,pp,tt+t_Step) - dt2/C_p*deltaT/R;
+            %                         end
+            %                     end
+            %                     % Verhältnis von dt zu tau angeben
+            %                     if (f_Verbose == 1 && tt == ran(1) && cc == 1)
+            %                         fprintf('\nWärmeleitung: <%s>, <%s> (dt/tau = %f).',Sat_Struct(ss).name, Sat_Struct(pp).name, t_Res/tau);
+            %                     end
+            %                 end
             %             end
         end
     end

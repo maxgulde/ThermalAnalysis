@@ -1,0 +1,15 @@
+% Verknüpfung der Oberflächen des Modells mit Materialien aus <Materialien.txt>
+% Flächen bekommen Wärmeeintrag von Komponenten wie in <_Komponenten.txt> angegeben, getrennt durch Kommata - keine Verknüpfung durch <NA> angeben
+% Flächeninhalt und Gewicht der Einzelstrukturen
+% Flächen: nach außen gerichtetet Oberfläche, "Flaeche = 0" ist unsichtbar für Sonne und Erde % not implemented like that
+% Structure
+% Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten		Norm Az [deg]	Norm El [deg]
+Bench			Aluminium		Aluminium		0.02			0.25			NA				NaN				NaN
+Electronics		Aluminium		Aluminium		0.02			0.25			NA				NaN				NaN
+Payload_out		Steel			Steel			0.007853982		6.474			NA				0				90
+Panel_XM		Al_Anodyzed		Aluminium		0.0882			0.54			NA				180				0
+Panel_XP		Al_Anodyzed		Aluminium		0.0882			0.54			NA				0				0
+Panel_YM		AZUR			Aluminium		0.0882			0.54			NA				270				0
+Panel_YP		Al_Anodyzed		Aluminium		0.0882			0.54			NA				90				0
+Panel_ZM		Al_Anodyzed		Aluminium		0.0882			0.54			NA				0				-90
+Panel_ZP		Al_Anodyzed		Aluminium		0.072492026		0.489			NA				0				90
