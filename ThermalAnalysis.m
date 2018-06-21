@@ -525,24 +525,22 @@ for tt = ran
                 A = A * Sat_RadEffArea;
             end
             
-            for pp = f_IncludedParts
+            for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
 %                 if ss == 1 || ss == 2 || ss == 3
 %                     continue;
 %                 end
-                if ss == pp % Object is itself, radiate power
-                    % Change in incoming power
-                    dP_C = dP_C - ksb * T(1,ss,tt)^4 * A * ss_emi;
-                    dP_H = dP_H - ksb * T(2,ss,tt)^4 * A * ss_emi;
-                else % Object is another surface, use view factor
-                    pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
-                    pp_emi = Sat_Mat(pIdx).emi;
-                    A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
-                    
-                    % Internal view factor (emitter, receiver)
-                    % Change in incoming power
-                    dP_C = dP_C + ksb * T(1,ss,tt)^4 * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
-                    dP_H = dP_H + ksb * T(2,ss,tt)^4 * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+                if ss == pp % Object is itself
+                    continue;
                 end
+                % Object is another surface, use view factor
+                pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
+                pp_emi = Sat_Mat(pIdx).emi;
+                A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
+                
+                % Internal view factor (emitter, receiver)
+                % Change in incoming power
+                dP_C = dP_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+                dP_H = dP_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
             end
             
             % If external surface, radiate to the outside
