@@ -16,6 +16,7 @@
 % 2.4
 % - Changed albedo to fitted function of Lockheed Martin's Data (includes
 %   view factor)
+% - Added view factors for internal radiation
 % 2.3
 % - kompatibel gemacht zun Sidos Berechnungen für Validierung via Thermal Desktop
 % - Sol_Flux (hot case), fixer Albedowert, Celsius als Einheit, keine Zugriffszeiten, 
@@ -46,7 +47,7 @@ Sat_SurfNum = 21;               % Anzahl der Oberflächen wie in Simulation berec
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 2/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 10/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
@@ -69,7 +70,7 @@ f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
 f_EIR = 1;      % Erde IR
 f_Emi = 1;      % Emission Oberflächen
-f_TCo = 1;      % Thermische Kopplung
+f_TCo = 0;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
 % f_DrawParts = [1:10 11];
@@ -152,7 +153,6 @@ t_DaySec = 24*3600;
 
 % Physikalische Konstanten
 consts;
-clearConstants = true;
 re = 6371000;
 r = (re)/(re+700*1e3); % Testing
 %r = (RE)/(RE+Alt*1e3);
@@ -440,6 +440,7 @@ for tt = ran
             
             surf_sun_angle = rad2deg(atan2(norm(cross(normalV,sunVector)), dot(normalV,sunVector)));
             
+            %%%%%%%% INCLUDE SELF SHADOW (ORTHOGONAL PROJECTION)
             if surf_sun_angle < 90 || surf_sun_angle > -90
                 dP_C = dP_C + A * ss_abs * Sol_Flux(1) * cosd(surf_sun_angle);
                 dP_H = dP_H + A * ss_abs * Sol_Flux(2) * cosd(surf_sun_angle);
@@ -526,19 +527,16 @@ for tt = ran
             end
             
             for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
-%                 if ss == 1 || ss == 2 || ss == 3
-%                     continue;
-%                 end
-                if ss == pp % Object is itself
+                if ss == pp % Object is itself, calculation would be 0, skip
                     continue;
                 end
-                % Object is another surface, use view factor
+                % Object is another volume, use view factor
                 pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
                 pp_emi = Sat_Mat(pIdx).emi;
                 A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
                 
                 % Internal view factor (emitter, receiver)
-                % Change in incoming power
+                % Radiated power
                 dP_C = dP_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
                 dP_H = dP_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
             end
@@ -884,9 +882,4 @@ end
 if (f_SaveResults == 1)
     pfad = [d_Par 'Daten' fmt_Base '.mat'];
     save(pfad);
-end
-
-%% Clear workspace clutter
-if clearConstants
-    clearConsts
 end
