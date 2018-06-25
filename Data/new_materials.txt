@@ -4,9 +4,9 @@
 % hcap: spez. Wärmekapazität [J/kg K]
 % Oberflächen brauchen nur abs und emi, Volumina nur hcap
 % Name			abs		emi		hcap
-Aluminium		0.13	0.07	897
-Steel			0.42	0.11	502
-Al_Anodyzed		0.65	0.82	897
+Aluminium		0.13	0.07	900
+Steel			0.42	0.11	510
+Al_Anodyzed		0.65	0.82	900
 Germanium		0		0		310
 NA				0		0		0
 % % % MAP-space.com (Frankreich)

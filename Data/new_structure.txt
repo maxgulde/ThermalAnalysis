@@ -4,9 +4,9 @@
 % Flächen: nach außen gerichtetet Oberfläche, "Flaeche = 0" ist unsichtbar für Sonne und Erde
 % Structure
 % Name			Oberflaeche		Koerper			Flaeche [m^2]	Gewicht [kg]	Komponenten		Norm Az [deg]	Norm El [deg]
-Bench			ScAlMalloy		Aluminium		0.036			0.025			NA				NaN				NaN
-Electronics		FR_4_v			Aluminium		0.072			0.025			NA				NaN				NaN
-Payload_out		Steel			Steel			0.007853982		6.474			NA				0				90
+Bench			ScAlMalloy		ScAlMalloy		0.036			3.9690			NA				NaN				NaN
+Electronics		FR_4_v			FR_4_v			0.072			0.5994			NA				NaN				NaN
+Payload_out		Steel			Steel			0.007853982		6.1654			NA				0				90
 Panel_XM		Al_Anodyzed		Aluminium		0.0441			0.54			NA				180				0
 Panel_XP		Al_Anodyzed		Aluminium		0.0441			0.54			NA				0				0
 Panel_YM		AZUR			Aluminium		0.0441			0.54			NA				270				0
