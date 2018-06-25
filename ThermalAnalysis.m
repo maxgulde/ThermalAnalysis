@@ -47,7 +47,7 @@ Sat_SurfNum = 21;               % Anzahl der Oberflächen wie in Simulation berec
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 10/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 4/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
@@ -164,7 +164,7 @@ AlbMaxAngle = 100; % [deg] (Above 100 deg the formula generates complex numbers)
 if (f_ReloadAllData == 1)
     fprintf('Einlesen der Daten:\n');
     
-    % % Flächen und Leistung
+    % Flächen und Leistung
     % Reihenfolge extrahieren
     fid = fopen(d_AreaS);
     dat_temp = textscan(fid, fstrOrder, h_Area-2, 'HeaderLines', 2);
@@ -180,9 +180,9 @@ if (f_ReloadAllData == 1)
     dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
     dat_AreaE = dat_temp(5:end);
     if (f_PlotGenPower == 1)
-        fprintf(' ... Erzeugte Leistung ...\n');
-        dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
-        dat_Power = dat_temp(5:end);
+       fprintf(' ... Erzeugte Leistung ...\n');
+       dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
+       dat_Power = dat_temp(5:end);
     end
     
     % % Subsolarwinkel
@@ -212,8 +212,6 @@ if (f_ReloadAllData == 1)
             dat_Access(ii,2) = dat_Access(ii,1) + round(dat_temp{14}(ii));
         end
         ACtot = sum(dat_temp{:,14});
-    else
-        
     end
 
 end
@@ -438,12 +436,12 @@ for tt = ran
                 A = A * (1 - Sat_CellEff);
             end
             
-            surf_sun_angle = rad2deg(atan2(norm(cross(normalV,sunVector)), dot(normalV,sunVector)));
+            ss_sun_angle = rad2deg(atan2(norm(cross(normalV,sunVector)), dot(normalV,sunVector)));
             
             %%%%%%%% INCLUDE SELF SHADOW (ORTHOGONAL PROJECTION)
-            if surf_sun_angle < 90 || surf_sun_angle > -90
-                dP_C = dP_C + A * ss_abs * Sol_Flux(1) * cosd(surf_sun_angle);
-                dP_H = dP_H + A * ss_abs * Sol_Flux(2) * cosd(surf_sun_angle);
+            if ss_sun_angle < 90 || ss_sun_angle > -90
+                dP_C = dP_C + A * ss_abs * Sol_Flux(1) * cosd(ss_sun_angle);
+                dP_H = dP_H + A * ss_abs * Sol_Flux(2) * cosd(ss_sun_angle);
             end
         end
         
