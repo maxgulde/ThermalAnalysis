@@ -13,10 +13,10 @@ Panel_YP		Panel_ZP		0.0025	0.001	1
 Panel_YP		Panel_ZM		0.0025	0.001	1
 Panel_YM		Panel_ZP		0.0025	0.001	1
 Panel_YM		Panel_ZM		0.0025	0.001	1
-Panel_ZP		Payload_out		0.05	0.00157	1
+Panel_ZP		Payload 		0.05	0.00157	1
 Panel_ZM		Bench			0.0025	0.0324	1
-Bench			Electronics		0.025	0.0324	0.05
-Payload_out		Electronics		0.025	0.0324	0.005
+Bench			Electronics		0.025	0.0 	0.05
+Payload 		Electronics		0.025	0.0 	0.005
 
 %	Panel_XP		Al_Anodyzed		Aluminium		0.0441			0.54			NA				0				0
 %	Panel_XM		Al_Anodyzed		Aluminium		0.0441			0.54			NA				180				0

@@ -31,8 +31,8 @@
 %% Einstellungen
 
 % % % Orbit
-Inc = 97;
-Alt = 500;
+Inc = 98; % [deg]
+Alt = 700; % [km]
 RAA = 0;
 
 % % % Satellit
@@ -42,12 +42,12 @@ Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
 Sat_CellName = 'SolarCells';
-Sat_SurfNum = 21;               % Anzahl der Oberflächen wie in Simulation berechnet
+Sat_SurfNum = 9;               % Anzahl der Oberflächen wie in Simulation berechnet
 
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 4/365] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 1] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
@@ -83,7 +83,7 @@ f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
 % % % Darstellung
-f_FigNum = 1;           % Nummer der figure
+f_FigNum = 2;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
 f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
@@ -121,12 +121,18 @@ EIR_OrbitInc_H = [30 60 90; 257 241 230]';
 % Daten
 fmt_Base = sprintf('_i%.0f_a%.0f_r%02.0f_t%03.0f',Inc,Alt,RAA,t_Res);
 d_TEx = [d_TEx fmt_Base '.txt'];
-d_AreaS = sprintf('%sOut_AreaSunView%s%s.txt',d_Dat,fmt_Base,d_Suff);
+d_AreaS = sprintf('Out_AreaSunView_i98_1929_a700_r10_t120.txt');
 d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
-d_Power = sprintf('%sOut_Power%s%s.txt',d_Dat,fmt_Base,d_Suff);
-d_Access = sprintf('%s%s%s Access.csv',d_Dat,satName,fmt_Base(1:end-5));
-d_SubSol = sprintf('%sSunAngles.csv',d_Dat);
-d_EarthAngles = sprintf('%sEarthAngles.csv',d_Dat);
+d_Power = sprintf('Out_Power_i98_1929_a700_r10_t120.txt');
+d_Access = sprintf('SimpleSat AccessTimes.csv');
+d_SubSol = sprintf('SimpleSat_i98_1929_a700_r10_t120 SunAngles.csv');
+d_EarthAngles = sprintf('_EarthAngles.csv');
+% d_AreaS = sprintf('%sOut_AreaSunView%s%s.txt',d_Dat,fmt_Base,d_Suff);
+% d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
+% d_Power = sprintf('%sOut_Power%s%s.txt',d_Dat,fmt_Base,d_Suff);
+% d_Access = sprintf('%s%s%s Access.csv',d_Dat,satName,fmt_Base(1:end-5));
+% d_SubSol = sprintf('%sSunAngles.csv',d_Dat);
+% d_EarthAngles = sprintf('%sEarthAngles.csv',d_Dat);
 
 % Formatstrings
 fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
@@ -176,9 +182,9 @@ if (f_ReloadAllData == 1)
     dat_temp = ReadCSV(d_AreaS,fstrAreas,h_Area);
     dat_AreaS = dat_temp(5:end);
     dat_Time = dat_temp(1:4);
-    fprintf(' ... Flächen aus Erdsicht ...\n');
-    dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
-    dat_AreaE = dat_temp(5:end);
+    %fprintf(' ... Flächen aus Erdsicht ...\n');
+    %dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
+    %dat_AreaE = dat_temp(5:end);
     if (f_PlotGenPower == 1)
        fprintf(' ... Erzeugte Leistung ...\n');
        dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
@@ -425,24 +431,26 @@ for tt = ran
         % % % (1) Direct Sunlight (v2)
         if (f_Sun == 1)
             % Fläche
-            A = Sat_Struct(ss).size;
+            %A = Sat_Struct(ss).size;
             ss_abs = Sat_Mat(sIdx).abs;
+            
+            if (cIdx >= 0)
+                A = dat_AreaS{1,cIdx}(tt);
+            else
+                A = 0;
+            end
             
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ADDED ss == 6 for
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% tests, 6 is solar
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% panel here
             % geringerer Energieeingang für Solarzellen
             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1) || ss == 6
-                A = A * (1 - Sat_CellEff);
+                A = A * (1 - Sat_CellEff); %% TEMPORAL IGNORE!!!
             end
             
-            ss_sun_angle = rad2deg(atan2(norm(cross(normalV,sunVector)), dot(normalV,sunVector)));
+            dP_C = dP_C + A * ss_abs * Sol_Flux(1) * (Sat_Struct(ss).size > 0);
+            dP_H = dP_H + A * ss_abs * Sol_Flux(2) * (Sat_Struct(ss).size > 0);
             
-            %%%%%%%% INCLUDE SELF SHADOW (ORTHOGONAL PROJECTION)
-            if ss_sun_angle < 90 || ss_sun_angle > -90
-                dP_C = dP_C + A * ss_abs * Sol_Flux(1) * cosd(ss_sun_angle);
-                dP_H = dP_H + A * ss_abs * Sol_Flux(2) * cosd(ss_sun_angle);
-            end
         end
         
         % % % (2) Komponenten
