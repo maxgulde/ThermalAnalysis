@@ -428,7 +428,7 @@ for tt = ran
             bIdx = 1;
         end
         
-        % % % (1) Direct Sunlight (v2)
+        % % % (1) Direct Sunlight
         if (f_Sun == 1)
             % Fläche
             %A = Sat_Struct(ss).size;
