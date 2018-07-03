@@ -36,13 +36,13 @@ Alt = 700; % [km]
 RAA = 0;
 
 % % % Satellit
-satName = 'ERNST';          % Name des Satelliten
+satName = 'ERNST';              % Name des Satelliten
 T_Start = 293;                  % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
 Sat_CellName = 'SolarCells';
-Sat_SurfNum = 9;               % Anzahl der Oberflächen wie in Simulation berechnet
+Sat_SurfNum = 9;                % Anzahl der Oberflächen wie in Simulation berechnet
 
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
