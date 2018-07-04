@@ -51,7 +51,7 @@ T_Start = 273.15+52.7;              % [K] Initial temperature of the satellite
 % Sat_RadName = 'Radiator';
 % Sat_CellEff = 0.34;             % Effizienz Solarzellen
 % Sat_CellName = 'SolarCells';
-% Sat_SurfNum = 21;    % Anzahl der Oberflächen wie in Simulation berechnet
+% IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % % % Simulation
 t_Res = 60;             % [s] Temporal resolution                          % CHECK
@@ -110,7 +110,6 @@ fstrTCo = '%s %s %f %f %f';
 fstrDateIn = '%d %s %d %s';
 fstrDate = 'dd mmm yyyy HH:MM:SS';
 fstrOrder = '%s %s %s %s';
-% fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
 %fstrDateOut = '%.0f %s %.0f %02.0f:%02.0f:%02.0f';                        % DISABLED
 %fstrAccess = '%f,%f %s %f %f:%f:%f,%f %s %f %f:%f:%f,%f';                 % DISABLED
 % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
