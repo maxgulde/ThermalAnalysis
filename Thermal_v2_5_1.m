@@ -8,7 +8,13 @@
 % To-do
 % - TO-DO
 
+% To optimize
+% - EarthAngles into LocalZenith (vector components instead of angles)
+
 % Changes
+% 2.5.1
+% - Added separated surfaces for each part
+% - Optimized surface calculation by avoiding loop repetition
 % 2.5
 % - Cleaner code, commented unused code (to be removed)
 % - English version, translated from German
@@ -27,6 +33,10 @@
 % - Fix: Zeitkonstante korrigiert für thermal coupling
 
 %% Settings
+measureTime = 1;
+if measureTime == 1
+    tic
+end
 
 % % % Orbit
 Inc = 98;   % [deg]
@@ -35,7 +45,7 @@ RAA = 10;    % [deg]
 
 % % % Satellite
 satName = 'ERNST';          % Name of the satellite
-T_Start = 273.15+52.5;              % [K] Initial temperature of the satellite
+T_Start = 273.15+52.7;              % [K] Initial temperature of the satellite
 % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Sat_RadEffArea = 1.36;        % effektive Fläche des Radiators, Pyramide
 % Sat_RadName = 'Radiator';
@@ -138,7 +148,7 @@ if f_ReloadAllData == 1
     % % Subsolar Angles
     fprintf(' ... Subsolar Angles ...\n');
     dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
-    dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev
+    %dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev % Not required
     dat_SubSol = dat_temp(end);
     
     % Check temporal resolution of Subsolar Angles
@@ -284,6 +294,8 @@ if f_ReloadAllData || f_ReloadMatData
                 end
                 Sat_Struct.surfaces = tempStruct;
             end
+        else
+            Sat_Struct.surfaces = struct([]);
         end
     end
     
@@ -415,6 +427,15 @@ if(Inc > 90)
     inc_c = 180 - Inc;
 end
 
+% Influence from the inclination (Earth IR)
+facInc_C_EIR = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+facInc_H_EIR = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+
+% Influence from the inclination (Albedo)
+facInc_C_Alb = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+facInc_H_Alb = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+
+
 % Time-steps
 modDivisor = floor(numel(t_sim_index)/10);
 for tt = t_sim_index
@@ -424,7 +445,7 @@ for tt = t_sim_index
     end
     
     % Current time (used for internal components)
-    t_Now = (tt - t_Step) * dT;
+    %t_Now = (tt - t_Step) * dT;
     
     % Local zenith
     [localZenith(1),localZenith(2),localZenith(3)] = ...
@@ -433,9 +454,15 @@ for tt = t_sim_index
     % Negative of the vector that points towards the Earth
     localZenith = - localZenith;
     
-    % Sun vector
-    [sunVector(1),sunVector(2),sunVector(3)] = ...
-        sph2cart(deg2rad(dat_SolAng{1}(tt)),deg2rad(dat_SolAng{2}(tt)),1);
+    % Add correction for albedo (from subsolar angle)
+    if (f_UseFixedAlbedo < 0)
+        a_c = Alb_CorrSubsolar(find(Alb_CorrSubsolar(:,1) <= dat_SubSol{1}(tt),1,'last'),2);
+        facInc_C_Alb_tt = facInc_C_Alb + a_c;
+        facInc_H_Alb_tt = facInc_H_Alb + a_c;
+    else
+        facInc_C_Alb_tt = f_UseFixedAlbedo;
+        facInc_H_Alb_tt = f_UseFixedAlbedo;
+    end
     
     % % % (A) Isolated Consideration
     for ss = f_IncludedParts
@@ -444,56 +471,19 @@ for tt = t_sim_index
         P_H = 0;
         
         % Get materials for ss
-%         sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).optical));
+        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).optical));
         bIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).bulk));
-%         if (isempty(sIdx))
-%             fprintf('Error: Material <%s> not found. Changed to <%s>\n.',Sat_Struct(ss).optical, Sat_Mat(1).name);
-%             sIdx = 1;
-%         end
+        if (isempty(sIdx))
+            fprintf('Error: Material <%s> not found. Changed to <%s>\n.',Sat_Struct(ss).optical, Sat_Mat(1).name);
+            sIdx = 1;
+        end
         if (isempty(bIdx))
             fprintf('Error: Material <%s> not found. Changed to <%s>\n.',Sat_Struct(ss).bulk, Sat_Mat(1).name);
             bIdx = 1;
         end
         
-%         % Get surface area, abs and emi coefficients for ss
-%         A = Sat_Struct(ss).size;
-%         ss_abs = Sat_Mat(sIdx).abs;
-%         ss_emi = Sat_Mat(sIdx).emi;
-        
-        % % % (1) Direct Sunlight
+        % % % (1) Direct Sunlight (Optimized by Out_AreaSunView)
         if f_Sun == 1
-            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % INCORPORATE SOLAR CELLS CONSIDERATIONS? WHAT HAPPENS HERE?
-            %if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1) || ss == 6
-            %    A = A * (1 - Sat_CellEff);
-            %end
-            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            % Analyze each surface of the component
-            %             if numel(Sat_Struct(ss).surfaces) > 0
-            %                 for int_ss = 1:numel(Sat_Struct(ss).surfaces)
-            %                     if Sat_Struct(ss).surfaces(int_ss).internal == 0 % is external surface
-            %                         % Normal Vector
-            %                         normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
-            %
-            %                         % Area
-            %                         A = Sat_Struct(ss).surfaces(int_ss).area;
-            %
-            %                         % Optical Coating
-            %                         sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
-            %                         int_ss_abs = Sat_Mat(sIdx).abs;
-            %
-            %                         ss_sun_angle = ...
-            %                             rad2deg(atan2(norm(cross(normalV,sunVector)), ...
-            %                             dot(normalV,sunVector)));
-            %                         if ss_sun_angle < 90 || ss_sun_angle > -90
-            %                             P_C = P_C + A * int_ss_abs * Sol_Flux(1) * abs(cosd(ss_sun_angle));
-            %                             P_H = P_H + A * int_ss_abs * Sol_Flux(2) * abs(cosd(ss_sun_angle));
-            %                         end
-            %                     end
-            %                 end
-            %             end
-            
             % Index der Komponente in Flächendatei
             cIdx = Sat_Struct(ss).AFileIdx;
             % Wenn interne Struktur, dann auf -1 setzen
@@ -501,7 +491,7 @@ for tt = t_sim_index
                 cIdx = -1;
             end
             
-            if (cIdx >= 0)
+            if (cIdx > 0)
                 A = dat_AreaS{1,cIdx}(tt);
             else
                 A = 0;
@@ -511,25 +501,18 @@ for tt = t_sim_index
             %             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
             %                 A = A * (1 - Sat_CellEff);
             %             end
-            
-            sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).optical));
+
             ss_abs = Sat_Mat(sIdx).abs;
             
-            P_C = P_C + A * ss_abs * Sol_Flux(1) * (Sat_Struct(ss).size > 0);
-            P_H = P_H + A * ss_abs * Sol_Flux(2) * (Sat_Struct(ss).size > 0);
-            
-            
-            %%%%%%%                                                        % CHECK: INCLUDE SELF SHADOW (ORTHOGONAL PROJECTION)
-            % If visible by the Sun, power change
-            
+            P_C = P_C + A * ss_abs * Sol_Flux(1);
+            P_H = P_H + A * ss_abs * Sol_Flux(2);
         end
         
-        % % % (2) Components
+        % % % (2) Components (Surface independent)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                 % CHECK TO-DO
         
-        % % % (3) IR Emission of the Satellite (including internal rad.)
+        % % % (3) IR Emission (internal only, optimized by _internal_matrix)
         if f_Emi == 1
-            
             % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % INCORPORATE PROPER IMPLEMENTATION
             % Update area to effective area in case of modified radiator
@@ -537,130 +520,71 @@ for tt = t_sim_index
             %    A = A * Sat_RadEffArea;
             %end
             % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %             for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
-            %                 if ss == pp % Object is itself, calculation would be 0, skip
-            %                     continue;
-            %                 end
-            %                 % Object is another volume, use view factor
-            %                 pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).optical));
-            %                 pp_emi = Sat_Mat(pIdx).emi;
-            %                 pp_A = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
-            %
-            %                 % Internal view factor (source, target)
-            %                 % Radiated power                                           % CHECK PROPER AREA VALUES (SHOULD BE FULL VOLUME, ADD EXTERNAL SURFACE?)
-            %                 P_C = P_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
-            %                 P_H = P_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
-            %             end
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%% REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            if numel(Sat_Struct(ss).surfaces) > 0
-                for int_ss = 1:numel(Sat_Struct(ss).surfaces)
-                    if Sat_Struct(ss).surfaces(int_ss).internal == 0 % is external surface
-                        % Area
-                        A = Sat_Struct(ss).surfaces(int_ss).area;
-                        
-                        % Optical Coating
-                        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
-                        int_ss_emi = Sat_Mat(sIdx).emi;
-                        
-                        % Radiation
+
+            for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
+                if ss == pp % Object is itself, calculation would be 0, skip
+                    continue;
+                end
+                % Object is another volume, use view factor
+                pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).optical));
+                pp_emi = Sat_Mat(pIdx).emi;
+                pp_A = Sat_Struct(pp).size; % This is the total surf. area
+                
+                % Internal view factor (source, target)
+                % Radiated power                                           % CHECK PROPER AREA VALUES (SHOULD BE FULL VOLUME, ADD EXTERNAL SURFACE?)
+                P_C = P_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
+                P_H = P_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
+            end
+        end
+        
+        % % % IR Emissions, Earth IR & Albedo
+        % Check if the piece is divided into several surfaces
+        if numel(Sat_Struct(ss).surfaces) > 0
+            for int_ss = 1:numel(Sat_Struct(ss).surfaces) % Cycle through all the surfaces
+                % Only take into account external surfaces
+                if Sat_Struct(ss).surfaces(int_ss).internal == 0
+                    % Area
+                    A = Sat_Struct(ss).surfaces(int_ss).area;
+                    
+                    % Optical Coating
+                    sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
+                    int_ss_emi = Sat_Mat(sIdx).emi;
+                    int_ss_abs = Sat_Mat(sIdx).abs;
+                    
+                    % Normal Vector
+                    normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
+                    
+                    % View Factor
+                    rho = rad2deg(atan2(norm(cross(normalV,localZenith)), ...
+                        dot(normalV,localZenith)));
+                    vF = viewFactor(r,rho);
+                    
+                    % % % (3) IR Emission (external)
+                    if f_Emi == 1
                         P_C = P_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
                         P_H = P_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
                     end
-                end
-            end
-
-
-        end
-        
-        % % % (4) Earth IR
-        if f_EIR == 1
-            % Get the cold and hot factors                                 % CHECK COMMENT
-            facInc_C = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-            facInc_H = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-            
-            if numel(Sat_Struct(ss).surfaces) > 0
-                for int_ss = 1:numel(Sat_Struct(ss).surfaces)
-                    if Sat_Struct(ss).surfaces(int_ss).internal == 0 % is external surface
-                        % Normal Vector
-                        normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
-                        
-                        % Area
-                        A = Sat_Struct(ss).surfaces(int_ss).area;
-                        
-                        % Optical Coating
-                        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
-                        int_ss_emi = Sat_Mat(sIdx).emi;
-                        
-                        % View Factor
-                        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), ...
-                            dot(normalV,localZenith)));
-                        vF = viewFactor(r,rho);
-                        
-                        % Earth IR
-                        P_C = P_C + A * int_ss_emi * facInc_C .* vF;
-                        P_H = P_H + A * int_ss_emi * facInc_H .* vF;
+                    
+                    % % % (4) Earth IR
+                    if f_EIR == 1
+                        P_C = P_C + A * int_ss_emi * facInc_C_EIR .* vF;
+                        P_H = P_H + A * int_ss_emi * facInc_H_EIR .* vF;
                     end
-                end
-            end
-        end
-        
-        % % % (5) Albedo
-        if f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle
-            % Get the cold and hot albedo factors
-            if (f_UseFixedAlbedo < 0)
-                % Influence from the inclination
-                facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-                facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-                % Correction from subsolar angle
-                a_c = Alb_CorrSubsolar(find(Alb_CorrSubsolar(:,1) <= dat_SubSol{1}(tt),1,'last'),2);
-                facInc_C = facInc_C + a_c;
-                facInc_H = facInc_H + a_c;
-            else
-                facInc_C = f_UseFixedAlbedo;
-                facInc_H = f_UseFixedAlbedo;
-            end
-            
-            % Check for external surfaces and calculate change
-            if numel(Sat_Struct(ss).surfaces) > 0
-                for int_ss = 1:numel(Sat_Struct(ss).surfaces)
-                    if Sat_Struct(ss).surfaces(int_ss).internal == 0 % is external surface
-                        % Normal Vector
-                        normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
-                        
-                        % Area
-                        A = Sat_Struct(ss).surfaces(int_ss).area;
-                        
-                        % Optical Coating
-                        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
-                        int_ss_abs = Sat_Mat(sIdx).abs;
-                        
-                        % View Factor
-                        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), ...
-                            dot(normalV,localZenith)));
-                        vF = viewFactor(r,rho);
-                        
+                    
+                    % % % (5) Albedo
+                    if f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle
                         % Compute Albedo flux
-                        AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C,dat_SubSol{1}(tt),vF);
-                        AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H,dat_SubSol{1}(tt),vF);
+                        AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C_Alb_tt,dat_SubSol{1}(tt),vF);
+                        AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H_Alb_tt,dat_SubSol{1}(tt),vF);
                         
                         P_C = P_C + A * int_ss_abs * AlbedoFlux_C;
                         P_H = P_H + A * int_ss_abs * AlbedoFlux_H;
                     end
                 end
             end
+        else % This part is not divided into individual surfaces
+            % Would there be data where there it's not divided into
+            % surfaces? Add non separated case (?)
         end
         
         % % % (X) Temperature Calculation
@@ -950,3 +874,6 @@ fprintf(' done.\n');
 %     save(pfad);
 % end
 % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if measureTime == 1
+    toc
+end

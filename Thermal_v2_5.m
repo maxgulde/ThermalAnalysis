@@ -477,9 +477,9 @@ for tt = t_sim_index
             
             %%%%%%%                                                        % CHECK: INCLUDE SELF SHADOW (ORTHOGONAL PROJECTION)
             % If visible by the Sun, power change
-            if ss_sun_angle < 90 || ss_sun_angle > -90
-                P_C = P_C + A * ss_abs * Sol_Flux(1) * cosd(ss_sun_angle);
-                P_H = P_H + A * ss_abs * Sol_Flux(2) * cosd(ss_sun_angle);
+            if ss_sun_angle < 90 && ss_sun_angle > -90
+                P_C = P_C + A * ss_abs * Sol_Flux(1) * abs(cosd(ss_sun_angle));
+                P_H = P_H + A * ss_abs * Sol_Flux(2) * abs(cosd(ss_sun_angle));
             end
         end
         
