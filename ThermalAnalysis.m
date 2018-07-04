@@ -37,12 +37,12 @@ RAA = 0;
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-T_Start = 293;                  % Starttemperatur des Satelliten
+T_Start = 273.15+52.5;%293;                  % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
 Sat_CellName = 'SolarCells';
-Sat_SurfNum = 9;                % Anzahl der Oberflächen wie in Simulation berechnet
+Sat_SurfNum = 1;                % Anzahl der Oberflächen wie in Simulation berechnet
 
 % % % Simulation
 t_Res = 120;                    % [s] zeitliche Auflösung
@@ -57,10 +57,10 @@ d_Dat = [d_Bas 'ERNST_i97_a500_r00_t120_stiff\'];
 d_Par = 'Data\';
 d_Cmp = [d_Par '_Komponenten.txt'];
 d_Mat = [d_Par 'new_materials.txt'];
-d_Sur = [d_Par 'new_structure.txt'];
-d_TCo = [d_Par 'new_Waermeleitung.txt'];
+d_Sur = [d_Par 'new_structure2.txt'];
+d_TCo = [d_Par 'new_Waermeleitung2.txt'];
 d_XLo = [d_Par '_XLoads.txt'];
-d_TEx = [d_Par 'Temperatur'];
+%d_TEx = [d_Par 'Temperatur'];
 % d_Suff = ' - short';
 d_Suff = '';
 
@@ -120,7 +120,7 @@ EIR_OrbitInc_H = [30 60 90; 257 241 230]';
 
 % Daten
 fmt_Base = sprintf('_i%.0f_a%.0f_r%02.0f_t%03.0f',Inc,Alt,RAA,t_Res);
-d_TEx = [d_TEx fmt_Base '.txt'];
+%d_TEx = [d_TEx fmt_Base '.txt'];
 d_AreaS = sprintf('Out_AreaSunView_i98_1929_a700_r10_t120.txt');
 d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
 d_Power = sprintf('Out_Power_i98_1929_a700_r10_t120.txt');
@@ -250,6 +250,10 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         end
     end
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     % % Komponenten
     fprintf(' ... Komponenten ...\n');
     fid = fopen(d_Cmp);
@@ -404,10 +408,29 @@ for tt = ran
         dP_H = 0;
         
         % View Factor for Albedo and Earth IR
-        [normalV(1),normalV(2),normalV(3)] = ...
-            sph2cart(deg2rad(Sat_Struct(ss).azimuth),deg2rad(Sat_Struct(ss).elevation),1);
+        %[normalV(1),normalV(2),normalV(3)] = ...
+        %    sph2cart(deg2rad(Sat_Struct(ss).azimuth),deg2rad(Sat_Struct(ss).elevation),1);
+        %%%%% TESTING FAKE VF
+        %%rho = 45;%rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        %vF = viewFactor(r,rho);
+        normalV = [0,0,1];
         rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = viewFactor(r,rho);
+        vF = viewFactor(r,rho)/6;
+        normalV = [0,1,0];
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = vF + viewFactor(r,rho)/6;
+        normalV = [1,0,0];
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = vF + viewFactor(r,rho)/6;
+        normalV = [0,0,-1];
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = vF + viewFactor(r,rho)/6;
+        normalV = [0,-1,0];
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = vF + viewFactor(r,rho)/6;
+        normalV = [-1,0,0];
+        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
+        vF = vF + viewFactor(r,rho)/6;
         
         % Index der Komponente in Flächendatei
         cIdx = Sat_Struct(ss).AFileIdx;
@@ -440,12 +463,9 @@ for tt = ran
                 A = 0;
             end
             
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ADDED ss == 6 for
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% tests, 6 is solar
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% panel here
             % geringerer Energieeingang für Solarzellen
-            if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1) || ss == 6
-                A = A * (1 - Sat_CellEff); %% TEMPORAL IGNORE!!!
+            if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
+                A = A * (1 - Sat_CellEff);
             end
             
             dP_C = dP_C + A * ss_abs * Sol_Flux(1) * (Sat_Struct(ss).size > 0);
@@ -532,23 +552,24 @@ for tt = ran
                 A = A * Sat_RadEffArea;
             end
             
-            for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
-                if ss == pp % Object is itself, calculation would be 0, skip
-                    continue;
-                end
-                % Object is another volume, use view factor
-                pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
-                pp_emi = Sat_Mat(pIdx).emi;
-                A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
-                
-                % Internal view factor (emitter, receiver)
-                % Radiated power
-                dP_C = dP_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
-                dP_H = dP_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
-            end
+%             for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
+%                 if ss == pp % Object is itself, calculation would be 0, skip
+%                     continue;
+%                 end
+%                 % Object is another volume, use view factor
+%                 pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
+%                 pp_emi = Sat_Mat(pIdx).emi;
+%                 A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
+%                 
+%                 % Internal view factor (emitter, receiver)
+%                 % Radiated power
+%                 dP_C = dP_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+%                 dP_H = dP_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
+%             end
             
             % If external surface, radiate to the outside
-            if ~isnan(Sat_Struct(ss).azimuth) % External surfaces have a non NaN azimuth angle
+            %%%%%%%%%%%%%%%%%%%%% EXPERIMENTAL CHANGES
+            if isnan(Sat_Struct(ss).azimuth) % External surfaces have a non NaN azimuth angle
                 dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * ss_emi;
                 dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * ss_emi;
             end
@@ -566,13 +587,13 @@ for tt = ran
             facInc_C = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
             facInc_H = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
             % Leistungsänderung (emi gibt den Wert der Emission/Absorption im IR an)
-            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
-                P_C = 0;
-                P_H = 0;
-            else % No internal component, receives albedo
+           % if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
+           %     P_C = 0;
+            %    P_H = 0;
+           % else % No internal component, receives albedo
                 P_C = A * Sat_Mat(sIdx).emi * facInc_C .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
                 P_H = A * Sat_Mat(sIdx).emi * facInc_H .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
-            end
+            %end
             % Energieänderung
             dP_C = dP_C + P_C;
             dP_H = dP_H + P_H;
@@ -581,6 +602,11 @@ for tt = ran
         % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
         if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
             % Fläche
+%             if (cIdx >= 0)
+%                 A = dat_AreaS{1,cIdx}(tt);
+%             else
+%                 A = 0;
+%             end
             A = Sat_Struct(ss).size;
             % Korrektur um Inklination für SSO
             inc_c = Inc;
@@ -604,13 +630,8 @@ for tt = ran
             AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C,dat_SubSol{1}(tt),vF);
             AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H,dat_SubSol{1}(tt),vF);
             % Leistungsänderung
-            if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
-                P_C = 0;
-                P_H = 0;
-            else % No internal component, receives albedo
-                P_C = A * Sat_Mat(sIdx).abs * AlbedoFlux_C;
-                P_H = A * Sat_Mat(sIdx).abs * AlbedoFlux_H;
-            end
+            P_C = A * Sat_Mat(sIdx).abs * AlbedoFlux_C;
+            P_H = A * Sat_Mat(sIdx).abs * AlbedoFlux_H;
             % Leistungszuwachs
             dP_C = dP_C + P_C;
             dP_H = dP_H + P_H;
@@ -709,7 +730,7 @@ fprintf('\n ... fertich.\n');
 %% Plotten der Ergebnisse
     
 fprintf('Ergebnisse zeichnen ...');
-f_DrawParts = 1:7;
+f_DrawParts = 1;
 
 figure(f_FigNum);
 if (f_DrawOnTop == 1)

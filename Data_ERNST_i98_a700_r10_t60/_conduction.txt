@@ -1,0 +1,3 @@
+% Thermische leitende Verbindungen zwischen den Oberflächen
+% Name, Partner: Name der beiden Oberflächen
+% Name			Partner			L[m]	A[m^2]	C[W/mK]
