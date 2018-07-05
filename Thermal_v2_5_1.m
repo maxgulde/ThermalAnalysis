@@ -377,7 +377,7 @@ if f_ReloadAllData || f_ReloadMatData
     fprintf(' \t Components: %.2f kg ...\n',mass);
     
     % Print complete structure
-    fprintf('\tStructure:\n');
+    fprintf('\t Structure:\n');
     for ii = 1:StructNum
         fprintf('\t\t%d: %s\n',ii,Sat_Struct(ii).name);
     end
