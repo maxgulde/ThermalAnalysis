@@ -25,19 +25,20 @@
 % - Fix: Maximaler Albedowinkel eingeführt
 % - Fix: Zeitkonstante korrigiert für thermal coupling
 
-% clc;
-% clear;
-
 %% Einstellungen
+measureTime = 1;
+if measureTime == 1
+    tic
+end
 
 % % % Orbit
-Inc = 98; % [deg]
-Alt = 700; % [km]
-RAA = 0;
+Inc = 98;   % [deg]
+Alt = 700;  % [km]
+RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-T_Start = 273.15+52.5;%293;                  % Starttemperatur des Satelliten
+T_Start = 273.15+52.5;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
@@ -45,24 +46,61 @@ Sat_CellName = 'SolarCells';
 Sat_SurfNum = 1;                % Anzahl der Oberflächen wie in Simulation berechnet
 
 % % % Simulation
-t_Res = 120;                    % [s] zeitliche Auflösung
+t_Res = 60;                    % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 1] + 0.0;      % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 1];                 % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
 % % % Paths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Testing simple cube sat
-d_Bas = 'Data\';
-d_Dat = [d_Bas 'ERNST_i97_a500_r00_t120_stiff\'];
 d_Par = 'Data\';
 d_Cmp = [d_Par '_Komponenten.txt'];
-d_Mat = [d_Par 'new_materials.txt'];
-d_Sur = [d_Par 'new_structure2.txt'];
-d_TCo = [d_Par 'new_Waermeleitung2.txt'];
 d_XLo = [d_Par '_XLoads.txt'];
 %d_TEx = [d_Par 'Temperatur'];
 % d_Suff = ' - short';
 d_Suff = '';
+
+% % % Paths
+d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
+d_StrFolder = fullfile(d_Bas,'Structure');
+
+% % % Data Files
+d_SubSol = fullfile(d_Bas,'SunAngles.csv');
+d_EarthAngles = fullfile(d_Bas,'EarthAngles.csv');
+d_AreaS = fullfile(d_Bas,'Out_AreaSunView.txt');
+d_Mat = fullfile(d_Bas,'_materials.txt');        % Materials file
+d_Str = fullfile(d_StrFolder,'_structure.txt');      % Structure file
+d_TCo = fullfile(d_Bas,'_conduction.txt');    % Thermal conductivity
+d_IntRad = fullfile(d_Bas,'_internal_matrix.txt'); % Internal viewfactors
+
+% Daten
+fmt_Base = sprintf('_i%.0f_a%.0f_r%02.0f_t%03.0f',Inc,Alt,RAA,t_Res);
+%d_TEx = [d_TEx fmt_Base '.txt'];
+d_Power = sprintf('Out_Power_i98_1929_a700_r10_t120.txt');
+d_Access = sprintf('SimpleSat AccessTimes.csv');
+
+% Formatstrings
+fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
+fstrPower = '%d %s %d %12s;%f';
+fstrAccess = '%f,%f %s %f %f:%f:%f,%f %s %f %f:%f:%f,%f';
+fstrDateOut = '%.0f %s %.0f %02.0f:%02.0f:%02.0f';
+fstrCmp = '%s %d %f %f';
+fstrXLo = '%s %f %f %f';
+
+% % % Format Strings
+fstrMat = '%s %f %f %f'; % Name Abs Emi HCap
+fstrStr = '%s %s %s %f %f %s'; % Name Optical Bulk TotArea Weight Component
+fstrStrSurf = '%s %s %f %f %f %f %d'; % SurfName Optical Area Nx Ny Nz in_flag
+fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f), SubSol(f)
+fStrEarthAngles = '%d %s %d %12s,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f)
+fstrTCo = '%s %s %f %f %f';
+fstrDateIn = '%d %s %d %s';
+fstrDate = 'dd mmm yyyy HH:MM:SS';
+fstrOrder = '%s %s %s %s';
+
+% Header Zeilen
+h_Area = Sat_SurfNum + 2;
+h_Power = 3;
 
 % % % Optionen zum Zu- und Abschalten bestimmter Effekt
 f_Sun = 1;      % Sonneneinstrahlung
@@ -83,7 +121,7 @@ f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
 % % % Darstellung
-f_FigNum = 2;           % Nummer der figure
+f_FigNum = 1;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
 f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
@@ -105,63 +143,27 @@ if (f_ReloadAllData == 1 || f_ReloadMatData)
     Sat_Struct = struct();      % Oberflächen, Verknüpfung mit Mat und Cmp, Flächen und Gewicht
 end
 
-% % % Daten aus "SC Thermal Control Handbook", p. 28 (24 h, (C)old und (H)ot case)
-% Direktes Sonnenlicht
-Sol_Flux = [1322 1414];     % [W/m^2] cold and hot case
-T_Space = 2.7;              % [K] Temperatur Weltraum
-
+% % % Data from "SC Thermal Control Handbook", p. 28 (24h, (C)old and (H)ot
+% % % cases)
+% Direct sunlight
+Sol_Flux = [1322 1414];         % [W/m^2] Cold and hot cases
+T_Space = 2.7;                  % [K] Temperature of space
 % Albedo
-Alb_KorrSubsolar = [0:10:90; 0:0.01:0.05 0.08 0.13 0.2 0.31]';
+Alb_CorrSubsolar = [0:10:90; 0:0.01:0.05 0.08 0.13 0.2 0.31]';
 Alb_OrbitInc_C = [30 60 90; 0.17 0.2 0.2]';
 Alb_OrbitInc_H = [30 60 90; 0.19 0.23 0.23]';
-% Erde IR
+% Earth IR
 EIR_OrbitInc_C = [30 60 90; 236 226 225]';  % [W/m^2]
-EIR_OrbitInc_H = [30 60 90; 257 241 230]';
+EIR_OrbitInc_H = [30 60 90; 257 241 230]';  % [W/m^2]
 
-% Daten
-fmt_Base = sprintf('_i%.0f_a%.0f_r%02.0f_t%03.0f',Inc,Alt,RAA,t_Res);
-%d_TEx = [d_TEx fmt_Base '.txt'];
-d_AreaS = sprintf('Out_AreaSunView_i98_1929_a700_r10_t120.txt');
-d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
-d_Power = sprintf('Out_Power_i98_1929_a700_r10_t120.txt');
-d_Access = sprintf('SimpleSat AccessTimes.csv');
-d_SubSol = sprintf('SimpleSat_i98_1929_a700_r10_t120 SunAngles.csv');
-d_EarthAngles = sprintf('_EarthAngles.csv');
-% d_AreaS = sprintf('%sOut_AreaSunView%s%s.txt',d_Dat,fmt_Base,d_Suff);
-% d_AreaE = sprintf('%sOut_AreaEarthView%s%s.txt',d_Dat,fmt_Base,d_Suff);
-% d_Power = sprintf('%sOut_Power%s%s.txt',d_Dat,fmt_Base,d_Suff);
-% d_Access = sprintf('%s%s%s Access.csv',d_Dat,satName,fmt_Base(1:end-5));
-% d_SubSol = sprintf('%sSunAngles.csv',d_Dat);
-% d_EarthAngles = sprintf('%sEarthAngles.csv',d_Dat);
-
-% Formatstrings
-fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
-fstrPower = '%d %s %d %12s;%f';
-fstrAccess = '%f,%f %s %f %f:%f:%f,%f %s %f %f:%f:%f,%f';
-fstrDateIn = '%.0f %s %.0f %s';
-fstrDateOut = '%.0f %s %.0f %02.0f:%02.0f:%02.0f';
-fstrDate = 'dd mmm yyyy HH:MM:SS';
-fstrCmp = '%s %d %f %f';
-fstrMat = '%s %f %f %f';
-fstrStr = '%s %s %s %f %f %s %f %f';
-fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f), subsolar (f)
-fStrEarthAngles = '%d %s %d %12s,%f,%f'; % day (d) month (s) year (d) time (12s), azimuthal (f), elevation (f)
-fstrOrder = '%s %s %s %s';
-fstrTCo = '%s %s %f %f %f';
-fstrXLo = '%s %f %f %f';
-% Header Zeilen
-h_Area = Sat_SurfNum + 2;
-h_Power = 3;
+% Physical Constants
+consts;
+re = 6371000; % [m] Earth's Radius
+r = re/(re+Alt*1e3);
 
 % Zeit
 t_PlotScale = 24*3600;
 t_DaySec = 24*3600;
-
-% Physikalische Konstanten
-consts;
-re = 6371000;
-r = (re)/(re+700*1e3); % Testing
-%r = (RE)/(RE+Alt*1e3);
 
 % maximaler Subsolarwinkel für Albedo
 AlbMaxAngle = 100; % [deg] (Above 100 deg the formula generates complex numbers)
@@ -170,38 +172,92 @@ AlbMaxAngle = 100; % [deg] (Above 100 deg the formula generates complex numbers)
 if (f_ReloadAllData == 1)
     fprintf('Einlesen der Daten:\n');
     
-    % Flächen und Leistung
-    % Reihenfolge extrahieren
-    fid = fopen(d_AreaS);
-    dat_temp = textscan(fid, fstrOrder, h_Area-2, 'HeaderLines', 2);
-    dat_Order = dat_temp(3);
-    fclose(fid);
-    
-    % Flächen extrahieren
-    fprintf(' ... Flächen aus Sonnensicht ...\n');
-    dat_temp = ReadCSV(d_AreaS,fstrAreas,h_Area);
-    dat_AreaS = dat_temp(5:end);
-    dat_Time = dat_temp(1:4);
-    %fprintf(' ... Flächen aus Erdsicht ...\n');
-    %dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
-    %dat_AreaE = dat_temp(5:end);
-    if (f_PlotGenPower == 1)
-       fprintf(' ... Erzeugte Leistung ...\n');
-       dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
-       dat_Power = dat_temp(5:end);
-    end
-    
-    % % Subsolarwinkel
-    fprintf(' ... Subsolarwinkel ...\n');
+    % % Subsolar Angles
+    fprintf(' ... Subsolar Angles ...\n');
     dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
-    dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev
+    dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev % Not required
     dat_SubSol = dat_temp(end);
+    
+    % Check temporal resolution of Subsolar Angles
+    subSolStartDate = sprintf(fstrDateIn,dat_temp{1,1}(1),...
+        dat_temp{1,2}{1},dat_temp{1,3}(1),dat_temp{1,4}{1});
+    subSolStepDate = sprintf(fstrDateIn,dat_temp{1}(2),dat_temp{2}{2},...
+        dat_temp{1,3}(2),dat_temp{1,4}{2});
+    sEnd = length(dat_temp{1});
+    subSolEndDate = sprintf(fstrDateIn,dat_temp{1}(sEnd),...
+        dat_temp{2}{sEnd},dat_temp{1,3}(sEnd),dat_temp{1,4}{sEnd});
+    subSolStartTime = datevec(subSolStartDate,fstrDate);
+    subSolStepTime = datevec(subSolStepDate,fstrDate);
+    subSolEndTime = datevec(subSolEndDate,fstrDate);
+    subSolDuration = duration(subSolStepTime(4:6)-subSolStartTime(4:6));
+    subSolRes = seconds(subSolDuration);
+    
+    % Get full time data
+    dat_Time{4} = dat_temp{1,4};
+    dat_Time{3} = dat_temp{1,3};
+    dat_Time{2} = dat_temp{1,2};
+    dat_Time{1} = dat_temp{1,1};
+    
+    % Compare against input
+    if subSolRes ~= t_Res
+        fprintf(['\n !!! WARNING! !!!\n' ' !!! t_Res does not match the '...
+            'temporal resolution of the Solar Angles file. '...
+            'Using temporal resolution from file. !!!\n\n']);
+        t_Res = subSolRes;
+    end
     
     % % Local Zenith
     fprintf(' ... Local Zenith ...\n');
     dat_temp = ReadCSV(d_EarthAngles,fStrEarthAngles,1);
     dat_EarthAngles = dat_temp(end-1:end);
     
+    % Check temporal resolution of Local Zenith
+    zenithStartDate = sprintf(fstrDateIn,dat_temp{1,1}(1),...
+        dat_temp{1,2}{1},dat_temp{1,3}(1),dat_temp{1,4}{1});
+    zenithStepDate = sprintf(fstrDateIn,dat_temp{1}(2),dat_temp{2}{2},...
+        dat_temp{1,3}(2),dat_temp{1,4}{2});
+    zEnd = length(dat_temp{1});
+    zenithEndDate = sprintf(fstrDateIn,dat_temp{1}(zEnd),...
+        dat_temp{2}{zEnd},dat_temp{1,3}(zEnd),dat_temp{1,4}{zEnd});
+    zenithStartTime = datevec(zenithStartDate,fstrDate);
+    zenithStepTime = datevec(zenithStepDate,fstrDate);
+    zenithEndTime = datevec(zenithEndDate,fstrDate);
+    zenithDuration = duration(zenithStepTime(4:6)-zenithStartTime(4:6));
+    zenithRes = seconds(zenithDuration);
+    
+    % Compare against Subsolar
+    if subSolRes ~= zenithRes
+        error(['The temporal resolution of the Earth Angles file does '...
+            'not match the Solar Angles file.\n']);
+    end
+    if any((zenithEndTime - subSolEndTime) ~= 0) || ...
+            any((zenithStartTime - subSolStartTime) ~= 0)
+        error(['The Solar Angles dates do not match the ones from the '...
+            'Earth Angles file.\n']);
+    end
+    
+    % % % % % % % % % Moved to the next loading step % % % % % % % % % % %
+    % Flächen und Leistung
+    % Reihenfolge extrahieren
+    %     fid = fopen(d_AreaS);
+    %     dat_temp = textscan(fid, fstrOrder, h_Area-2, 'HeaderLines', 2);
+    %     dat_Order = dat_temp(3);
+    %     fclose(fid);
+    %
+    %     % Flächen extrahieren
+    %     fprintf(' ... Flächen aus Sonnensicht ...\n');
+    %     dat_temp = ReadCSV(d_AreaS,fstrAreas,h_Area);
+    %     dat_AreaS = dat_temp(5:end);
+    %     dat_Time = dat_temp(1:4);
+    %     %fprintf(' ... Flächen aus Erdsicht ...\n');
+    %     %dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
+    %     %dat_AreaE = dat_temp(5:end);
+    %     if (f_PlotGenPower == 1)
+    %        fprintf(' ... Erzeugte Leistung ...\n');
+    %        dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
+    %        dat_Power = dat_temp(5:end);
+    %     end
+    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
     
     % % Zugriffszeiten
     if (f_IgnoreAccessIntervals == 0)
@@ -223,33 +279,74 @@ if (f_ReloadAllData == 1)
 end
 
 if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
+    Sat_Mat = struct();     % Materials, Absorption and Emission
+    Sat_Struct = struct();
     
-    % % Flächen: Name, Material, Größe, Komponenten
-    fprintf(' ... Struktur ...\n');
-    fid = fopen(d_Sur);
-    dat = textscan(fid, fstrStr, 'CommentStyle','%');
+    % % Structure: Name, materials, size, etc.
+    fprintf(' ... Reading Structure ...\n');
+    fid = fopen(d_Str);
+    dat_temp = textscan(fid,fstrStr,'CommentStyle','%');
     fclose(fid);
-    StructNum = numel(dat{1});
-    % Anzahl der simulierten Teile setzen, falls noch nicht geschehen
+    StructNum = numel(dat_temp{1});
+    % Number of simulated parts
     if (f_IncludedParts == 0)
         f_IncludedParts = 1:StructNum;
     end
+    
+    fstrAreas = ['%d %s %d %12s' repmat(';%f',1,StructNum)];
+    h_Area = StructNum + 2;
+    
+    % SunView
+    fprintf(' ... Reading Structure in Sunlight ...\n');
+    dat_temp2 = ReadCSV(d_AreaS,fstrAreas,h_Area);
+    dat_AreaS = dat_temp2(5:end);
+    dat_Time = dat_temp2(1:4);
+    
+    % Extract order
+    fid = fopen(d_AreaS);
+    dat_temp2 = textscan(fid, fstrOrder, h_Area-2, 'HeaderLines', 2);
+    dat_Order = dat_temp2(3);
+    fclose(fid);
+    
+    fprintf(' ... Creating Structure ...\n');
     for ii = 1:StructNum
-        Sat_Struct(ii).name = dat{1}{ii};
-        Sat_Struct(ii).surf = dat{2}{ii};   % components have NA surface
-        Sat_Struct(ii).bulk = dat{3}{ii};
-        Sat_Struct(ii).size = dat{4}(ii);
-        Sat_Struct(ii).mass = dat{5}(ii);
-        Sat_Struct(ii).cmp = strsplit(dat{6}{ii},',');
-        Sat_Struct(ii).azimuth = dat{7}(ii);
-        Sat_Struct(ii).elevation = dat{8}(ii);
-        % Position in Flächendatei
+        Sat_Struct(ii).name = dat_temp{1}{ii};
+        Sat_Struct(ii).optical = dat_temp{2}{ii};	% Cmps have NA surface
+        Sat_Struct(ii).bulk = dat_temp{3}{ii};
+        Sat_Struct(ii).size = dat_temp{4}(ii);
+        Sat_Struct(ii).mass = dat_temp{5}(ii);
+        Sat_Struct(ii).cmp = strsplit(dat_temp{6}{ii},',');                % CHECK
+        % Position in area files
         Sat_Struct(ii).AFileIdx = find(strcmp(dat_Order{:},Sat_Struct(ii).name));
         if (isempty(Sat_Struct(ii).AFileIdx))
             fprintf('\t\t+Interne Struktur: %s \n',Sat_Struct(ii).name);
         end
+        
+        % Read individual surfaces
+        if strcmp(Sat_Struct(ii).cmp,'NA')
+            temp_path = fullfile(d_StrFolder,[Sat_Struct(ii).name '.txt']);
+            if exist(temp_path,'file') ~= 0
+                fid = fopen(temp_path);
+                dat_temp2 = textscan(fid,fstrStrSurf,'CommentStyle','%');
+                fclose(fid);
+                tLength = length(dat_temp2{1});
+                tempStruct = struct();
+                
+                for iii = 1:tLength
+                    tempStruct(iii).name = dat_temp2{1}{iii};
+                    tempStruct(iii).optical = dat_temp2{2}{iii};
+                    tempStruct(iii).area = dat_temp2{3}(iii);
+                    tempStruct(iii).normalV = ...
+                        [dat_temp2{4}(iii), dat_temp2{5}(iii), dat_temp2{6}(iii)];
+                    tempStruct(iii).internal = dat_temp2{7}(iii);
+                end
+                Sat_Struct.surfaces = tempStruct;
+            end
+        else
+            Sat_Struct.surfaces = struct([]);
+        end
     end
-
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -316,13 +413,14 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         end
     end
     
-    fprintf(' ... Internal Radiation TESTING ...\n');
-    fid = fopen([d_Par 'matrix.txt']);
-    dat = textscan(fid, '%f %f %f %f %f %f %f %f %f', 'CommentStyle','%');
+    % % Internal Radiation
+    fprintf(' ... Internal Radiation ...\n');
+    fid = fopen(d_IntRad);
+    dat_temp = textscan(fid,'%f %f %f %f %f %f %f %f %f','CommentStyle','%');
     fclose(fid);
     internal_vf = zeros(9);
     for iii = 1:9
-        internal_vf(:,iii) = dat{1,iii};
+        internal_vf(:,iii) = dat_temp{1,iii};
     end
     
     % % extra Lastfälle
@@ -331,20 +429,20 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
     dat_XLo = textscan(fid, fstrXLo, 'CommentStyle','%');
     fclose(fid);
     
-    % Gesamtgewicht
-    fprintf(' Gesamtgewicht:  %.2f kg ...\n',sum([Sat_Struct(:).mass]));
-    % von Komponenten
+    % Full weight
+    fprintf(' Full weight:  %.2f kg ...\n',sum([Sat_Struct(:).mass]));
+    % from components
     mass = 0;
     for ii = 1:numel(Sat_Struct)
-        if (strcmp(Sat_Struct(ii).surf,'NA') == 1)
+        if (strcmp(Sat_Struct(ii).optical,'NA') == 1)
             mass = mass + Sat_Struct(ii).mass;
         end
     end
-    fprintf(' \t Struktur:    %.2f kg ...\n',sum([Sat_Struct(:).mass]) - mass);
-    fprintf(' \t Komponenten: %.2f kg ...\n',mass);
+    fprintf(' \t Structure:  %.2f kg ...\n',sum([Sat_Struct(:).mass]) - mass);
+    fprintf(' \t Components: %.2f kg ...\n',mass);
     
-    % einmal komplette Struktur anzeigen
-    fprintf('\tStruktur:\n');
+    % Print complete structure
+    fprintf('\t Structure:\n');
     for ii = 1:StructNum
         fprintf('\t\t%d: %s\n',ii,Sat_Struct(ii).name);
     end
@@ -380,97 +478,94 @@ T(:,:,ran(1)) = T_Start;
 % Oberflächen sortieren
 f_IncludedParts = sort(f_IncludedParts);
 
-% Zeitschritte
-count = 1;
+% Delta t
+dT = t_Res * t_Step;
+
+% Correction for the inclination
+inc_c = Inc;
+if(Inc > 90)
+    inc_c = 180 - Inc;
+end
+
+% Influence from the inclination (Earth IR)
+facInc_C_EIR = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+facInc_H_EIR = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+
+% Influence from the inclination (Albedo)
+facInc_C_Alb = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
+facInc_H_Alb = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
+
+
+% Time-steps
+modDivisor = floor(numel(ran)/10);
 for tt = ran
-    % Fortschritt
-    if (mod(count,floor(numel(ran)/10)) == 0)
+    % Print progess
+    if mod(tt,modDivisor) == 0
         fprintf('.');
     end
-    % aktuelle Zeit
-    t_Now = (count - 1) * t_Res * t_Step;
-    count = count + 1;
+    
+    % Current time (used for internal components)
+    %t_Now = (tt - t_Step) * dT;
     
     % Local zenith
     [localZenith(1),localZenith(2),localZenith(3)] = ...
-        sph2cart(deg2rad(dat_EarthAngles{1}(tt)),deg2rad(dat_EarthAngles{2}(tt)),1);
-    localZenith = - localZenith; % Negative of the vector that points towards the Earth
+        sph2cart(deg2rad(dat_EarthAngles{1}(tt)), ...
+        deg2rad(dat_EarthAngles{2}(tt)),1);
+    % Negative of the vector that points towards the Earth
+    localZenith = - localZenith;
     
-    % Sun vector
-    [sunVector(1),sunVector(2),sunVector(3)] = ...
-        sph2cart(deg2rad(dat_SolAng{1}(tt)),deg2rad(dat_SolAng{2}(tt)),1);
+    % Add correction for albedo (from subsolar angle)
+    if (f_UseFixedAlbedo < 0)
+        a_c = Alb_CorrSubsolar(find(Alb_CorrSubsolar(:,1) <= dat_SubSol{1}(tt),1,'last'),2);
+        facInc_C_Alb_tt = facInc_C_Alb + a_c;
+        facInc_H_Alb_tt = facInc_H_Alb + a_c;
+    else
+        facInc_C_Alb_tt = f_UseFixedAlbedo;
+        facInc_H_Alb_tt = f_UseFixedAlbedo;
+    end
     
     % % % (A) Isolierte Betrachtung
     for ss = f_IncludedParts
+        % Received power
+        P_C = 0;
+        P_H = 0;
         
-        % Leistungszuwachs
-        dP_C = 0;
-        dP_H = 0;
-        
-        % View Factor for Albedo and Earth IR
-        %[normalV(1),normalV(2),normalV(3)] = ...
-        %    sph2cart(deg2rad(Sat_Struct(ss).azimuth),deg2rad(Sat_Struct(ss).elevation),1);
-        %%%%% TESTING FAKE VF
-        %%rho = 45;%rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        %vF = viewFactor(r,rho);
-        normalV = [0,0,1];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = viewFactor(r,rho)/6;
-        normalV = [0,1,0];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = vF + viewFactor(r,rho)/6;
-        normalV = [1,0,0];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = vF + viewFactor(r,rho)/6;
-        normalV = [0,0,-1];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = vF + viewFactor(r,rho)/6;
-        normalV = [0,-1,0];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = vF + viewFactor(r,rho)/6;
-        normalV = [-1,0,0];
-        rho = rad2deg(atan2(norm(cross(normalV,localZenith)), dot(normalV,localZenith)));
-        vF = vF + viewFactor(r,rho)/6;
-        
-        % Index der Komponente in Flächendatei
-        cIdx = Sat_Struct(ss).AFileIdx;
-        % Wenn interne Struktur, dann auf -1 setzen
-        if (isempty(cIdx))
-            cIdx = -1;
-        end
-        
-        % Material finden
-        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surf));
+        % Get materials for ss
+        sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).optical));
         bIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).bulk));
         if (isempty(sIdx))
-            fprintf('Error: Material <%s> nicht gefunden. Wechsle zu <%s>\n.',Sat_Struct(ss).surf, Sat_Mat(1).name);
+            fprintf('Error: Material <%s> not found. Changed to <%s>\n.',Sat_Struct(ss).optical, Sat_Mat(1).name);
             sIdx = 1;
         end
         if (isempty(bIdx))
-            fprintf('Error: Material <%s> nicht gefunden. Wechsle zu <%s>\n.',Sat_Struct(ss).bulk, Sat_Mat(1).name);
+            fprintf('Error: Material <%s> not found. Changed to <%s>\n.',Sat_Struct(ss).bulk, Sat_Mat(1).name);
             bIdx = 1;
         end
         
-        % % % (1) Direct Sunlight
-        if (f_Sun == 1)
-            % Fläche
-            %A = Sat_Struct(ss).size;
-            ss_abs = Sat_Mat(sIdx).abs;
+        % % % (1) Direct Sunlight (Optimized by Out_AreaSunView)
+        if f_Sun == 1
+            % Index der Komponente in Flächendatei
+            cIdx = Sat_Struct(ss).AFileIdx;
+            % Wenn interne Struktur, dann auf -1 setzen
+            if (isempty(cIdx))
+                cIdx = -1;
+            end
             
-            if (cIdx >= 0)
+            if (cIdx > 0)
                 A = dat_AreaS{1,cIdx}(tt);
             else
                 A = 0;
             end
             
-            % geringerer Energieeingang für Solarzellen
-            if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
-                A = A * (1 - Sat_CellEff);
-            end
+            %             % geringerer Energieeingang für Solarzellen
+            %             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
+            %                 A = A * (1 - Sat_CellEff);
+            %             end
+
+            ss_abs = Sat_Mat(sIdx).abs;
             
-            dP_C = dP_C + A * ss_abs * Sol_Flux(1) * (Sat_Struct(ss).size > 0);
-            dP_H = dP_H + A * ss_abs * Sol_Flux(2) * (Sat_Struct(ss).size > 0);
-            
+            P_C = P_C + A * ss_abs * Sol_Flux(1);
+            P_H = P_H + A * ss_abs * Sol_Flux(2);
         end
         
         % % % (2) Komponenten
@@ -537,125 +632,104 @@ for tt = ran
                 end
             end
             % Leistungszuwachs
-            dP_C = dP_C + P;
-            dP_H = dP_H + P;
+            P_C = P_C + P;
+            P_H = P_H + P;
         end
         
-        % % % (3) IR Emission of the Satellite (v2, including internal radiation)
-        if (f_Emi == 1)
-            % Get the area of the radiating (and absorbing) surface
-            A = Sat_Struct(ss).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
-            ss_emi = Sat_Mat(sIdx).emi;
-            
+        % % % (3) IR Emission (internal only, optimized by _internal_matrix)
+        if f_Emi == 1
+            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % INCORPORATE PROPER IMPLEMENTATION
             % Update area to effective area in case of modified radiator
-            if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
-                A = A * Sat_RadEffArea;
-            end
-            
-%             for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
-%                 if ss == pp % Object is itself, calculation would be 0, skip
-%                     continue;
-%                 end
-%                 % Object is another volume, use view factor
-%                 pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).surf));
-%                 pp_emi = Sat_Mat(pIdx).emi;
-%                 A_src = Sat_Struct(pp).size; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEED TO UPDATE, MATRIX REPRESENTS VF OF TOTAL OBJECT
-%                 
-%                 % Internal view factor (emitter, receiver)
-%                 % Radiated power
-%                 dP_C = dP_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
-%                 dP_H = dP_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * A_src * internal_vf(pp,ss);
-%             end
-            
-            % If external surface, radiate to the outside
-            %%%%%%%%%%%%%%%%%%%%% EXPERIMENTAL CHANGES
-            if isnan(Sat_Struct(ss).azimuth) % External surfaces have a non NaN azimuth angle
-                dP_C = dP_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * ss_emi;
-                dP_H = dP_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * ss_emi;
-            end
-        end
-        
-        % % % (4) Erde IR
-        if (f_EIR == 1)
-            % Fläche
-            A = Sat_Struct(ss).size;
-            % Korrektur um Inklination
-            inc_c = Inc;
-            if(Inc > 90)
-                inc_c = 180 - Inc;
-            end
-            facInc_C = EIR_OrbitInc_C(find(EIR_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-            facInc_H = EIR_OrbitInc_H(find(EIR_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-            % Leistungsänderung (emi gibt den Wert der Emission/Absorption im IR an)
-           % if (isnan(Sat_Struct(ss).azimuth) || isnan(Sat_Struct(ss).elevation)) % Internal component, does not receive albedo
-           %     P_C = 0;
-            %    P_H = 0;
-           % else % No internal component, receives albedo
-                P_C = A * Sat_Mat(sIdx).emi * facInc_C .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
-                P_H = A * Sat_Mat(sIdx).emi * facInc_H .* vF; %%%%%%%%%%%%%%%%%%%%%%%%%%% CHECK %%%%%%%%%%%%%%%%%%%%
+            %if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
+            %    A = A * Sat_RadEffArea;
             %end
-            % Energieänderung
-            dP_C = dP_C + P_C;
-            dP_H = dP_H + P_H;
-        end
-        
-        % % % (5) Albedo (nur wenn Subsolarwinkel kleiner als maximaler Winkel)
-        if (f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle)
-            % Fläche
-%             if (cIdx >= 0)
-%                 A = dat_AreaS{1,cIdx}(tt);
-%             else
-%                 A = 0;
-%             end
-            A = Sat_Struct(ss).size;
-            % Korrektur um Inklination für SSO
-            inc_c = Inc;
-            if(Inc > 90)
-                inc_c = 180 - Inc;
-            end
-            if (f_UseFixedAlbedo < 0)
-                %Einfluss anhand der Inklination
-                facInc_C = Alb_OrbitInc_C(find(Alb_OrbitInc_C(:,1) <= inc_c,1,'last'),2);
-                facInc_H = Alb_OrbitInc_H(find(Alb_OrbitInc_H(:,1) <= inc_c,1,'last'),2);
-                %Korrektur anhand des Subsolarwinkels
-                alpha = dat_SubSol{1}(tt);
-                a_c = Alb_KorrSubsolar(find(Alb_KorrSubsolar(:,1) <= alpha,1,'last'),2);
-                facInc_C = facInc_C + a_c;
-                facInc_H = facInc_H + a_c;
-            else
-                facInc_C = f_UseFixedAlbedo;
-                facInc_H = f_UseFixedAlbedo;
-            end
-            % Compute Albedo flux
-            AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C,dat_SubSol{1}(tt),vF);
-            AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H,dat_SubSol{1}(tt),vF);
-            % Leistungsänderung
-            P_C = A * Sat_Mat(sIdx).abs * AlbedoFlux_C;
-            P_H = A * Sat_Mat(sIdx).abs * AlbedoFlux_H;
-            % Leistungszuwachs
-            dP_C = dP_C + P_C;
-            dP_H = dP_H + P_H;
-        end
-        
-        
-        % % % (X) Temperaturberechnung
-    
-        % Energie erhalten durch Skalierung Leistung mit Zeitschritt
-        E_C = dP_C * (t_Res * t_Step);
-        E_H = dP_H * (t_Res * t_Step);
+            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % Umrechnen in Temperaturänderung
-        dT_C = E_C / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
-        dT_H = E_H / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
+            for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
+                if ss == pp % Object is itself, calculation would be 0, skip
+                    continue;
+                end
+                % Object is another volume, use view factor
+                pIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(pp).optical));
+                pp_emi = Sat_Mat(pIdx).emi;
+                pp_A = Sat_Struct(pp).size; % This is the total surf. area
+                
+                % Internal view factor (source, target)
+                % Radiated power                                           % CHECK PROPER AREA VALUES (SHOULD BE FULL VOLUME, ADD EXTERNAL SURFACE?)
+                P_C = P_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
+                P_H = P_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
+            end
+        end
+        
+        % % % IR Emissions, Earth IR & Albedo
+        % Check if the piece is divided into several surfaces
+        if numel(Sat_Struct(ss).surfaces) > 0
+            for int_ss = 1:numel(Sat_Struct(ss).surfaces) % Cycle through all the surfaces
+                % Only take into account external surfaces
+                if Sat_Struct(ss).surfaces(int_ss).internal == 0
+                    % Area
+                    A = Sat_Struct(ss).surfaces(int_ss).area;
+                    
+                    % Optical Coating
+                    sIdx = find(strcmp({Sat_Mat(:).name}',Sat_Struct(ss).surfaces(int_ss).optical));
+                    int_ss_emi = Sat_Mat(sIdx).emi;
+                    int_ss_abs = Sat_Mat(sIdx).abs;
+                    
+                    % Normal Vector
+                    normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
+                    
+                    % View Factor
+                    rho = rad2deg(atan2(norm(cross(normalV,localZenith)), ...
+                        dot(normalV,localZenith)));
+                    vF = viewFactor(r,rho);
+                    
+                    % % % (3) IR Emission (external)
+                    if f_Emi == 1
+                        P_C = P_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
+                        P_H = P_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
+                    end
+                    
+                    % % % (4) Earth IR
+                    if f_EIR == 1
+                        P_C = P_C + A * int_ss_emi * facInc_C_EIR .* vF;
+                        P_H = P_H + A * int_ss_emi * facInc_H_EIR .* vF;
+                    end
+                    
+                    % % % (5) Albedo
+                    if f_Alb == 1 && dat_SubSol{1}(tt) < AlbMaxAngle
+                        % Compute Albedo flux
+                        AlbedoFlux_C = albedoSolarFlux(Sol_Flux(1).*facInc_C_Alb_tt,dat_SubSol{1}(tt),vF);
+                        AlbedoFlux_H = albedoSolarFlux(Sol_Flux(2).*facInc_H_Alb_tt,dat_SubSol{1}(tt),vF);
+                        
+                        P_C = P_C + A * int_ss_abs * AlbedoFlux_C;
+                        P_H = P_H + A * int_ss_abs * AlbedoFlux_H;
+                    end
+                end
+            end
+        else % This part is not divided into individual surfaces
+            % Would there be data where there it's not divided into
+            % surfaces? Add non separated case (?)
+        end
+        
+        % % % (X) Temperature Calculation
+        
+        % Energy change calculation
+        dE_C = P_C * dT;
+        dE_H = P_H * dT;
+        
+        % Temperature change calculation
+        dT_C = dE_C / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
+        dT_H = dE_H / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
         T(1,ss,tt+t_Step) = T(1,ss,tt) + dT_C;
         T(2,ss,tt+t_Step) = T(2,ss,tt) + dT_H;
-        % Negative Temperaturen verhindern
+        
+        % Prevent negative temperatures
         for ii = 1:2
             if (T(ii,ss,tt+t_Step) < T_Space)
                 T(ii,ss,tt+t_Step) = T_Space;
             end
         end 
-
     end
     
     % % % (B) Wärmeleitung, etc. zwischen Einzelkomponenten
@@ -909,4 +983,9 @@ end
 if (f_SaveResults == 1)
     pfad = [d_Par 'Daten' fmt_Base '.mat'];
     save(pfad);
+end
+
+%% Elapsed Time
+if measureTime == 1
+    toc
 end

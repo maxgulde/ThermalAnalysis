@@ -8,3 +8,9 @@ surf3			Aluminium	0.04			0			1			0			0
 surf4			Aluminium	0.04			0			-1			0			0
 surf5			Aluminium	0.04			0			0			1			0
 surf6			Aluminium	0.04			0			0			-1			0
+surf7			Aluminium	0.04			1			0			0			1
+surf8			Aluminium	0.04			-1			0			0			1
+surf9			Aluminium	0.04			0			1			0			1
+surf10			Aluminium	0.04			0			-1			0			1
+surf11			Aluminium	0.04			0			0			1			1
+surf12			Aluminium	0.04			0			0			-1			1

@@ -1,4 +1,4 @@
-% Nanosatellite Therman Analysis Script v2.5
+% Nanosatellite Thermal Analysis Script v2.5.1
 %
 % Last updated: 2018-07-04
 
@@ -16,7 +16,7 @@
 % - Added separated surfaces for each part
 % - Optimized surface calculation by avoiding loop repetition
 % 2.5
-% - Cleaner code, commented unused code (to be removed)
+% - Cleaner code
 % - English version, translated from German
 % 2.4
 % - Changed albedo to fitted function of Lockheed Martin's Data (includes
@@ -147,7 +147,7 @@ if f_ReloadAllData == 1
     % % Subsolar Angles
     fprintf(' ... Subsolar Angles ...\n');
     dat_temp = ReadCSV(d_SubSol,fstrSubSol,1);
-    %dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev % Not required
+    dat_SolAng = dat_temp(end-2:end-1); % Azimuth, Elev % Not required
     dat_SubSol = dat_temp(end);
     
     % Check temporal resolution of Subsolar Angles
@@ -508,7 +508,7 @@ for tt = t_sim_index
         end
         
         % % % (2) Components (Surface independent)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                 % CHECK TO-DO
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                 % TO-DO
         
         % % % (3) IR Emission (internal only, optimized by _internal_matrix)
         if f_Emi == 1
@@ -695,10 +695,11 @@ end
 
 % Draw according to case
 c = 1;
-switch f_DrawCaseIndex
-    case 1 % Mean case
-        leg = cell(numel(f_DrawParts),1);
-        for ii = f_IncludedParts(f_DrawParts)
+for ii = f_IncludedParts(f_DrawParts)
+    switch f_DrawCaseIndex
+        case 1 % Mean case
+            leg = cell(numel(f_DrawParts),1);
+            
             y = squeeze(mean(T(:,ii,t_sim_index(1) + 1:end),1));
             y = y(y ~= 0);
             plot(t_Vec, y - tempOffset,'LineWidth',f_PlotLineWidth);
@@ -708,10 +709,10 @@ switch f_DrawCaseIndex
             % Legend
             leg{c} = [Sat_Struct(ii).name ' (mean)'];
             c = c + 1;
-        end
-    case 2 % Hot case
-        leg = cell(numel(f_DrawParts),1);
-        for ii = f_IncludedParts(f_DrawParts)
+            
+        case 2 % Hot case
+            leg = cell(numel(f_DrawParts),1);
+            
             y = squeeze(T(:,ii,t_sim_index(1) + 1:end));
             plot(t_Vec, y(2,(y(2,:) ~= 0)) - tempOffset,'LineWidth',f_PlotLineWidth);
             if (ii == f_IncludedParts(f_DrawParts(1)))
@@ -719,11 +720,11 @@ switch f_DrawCaseIndex
             end
             % Legend
             leg{c} = [Sat_Struct(ii).name ' (hot)'];
-            c = c + 1; 
-        end
-    case 3 % Cold case
-        leg = cell(numel(f_DrawParts),1);
-        for ii = f_IncludedParts(f_DrawParts)
+            c = c + 1;
+            
+        case 3 % Cold case
+            leg = cell(numel(f_DrawParts),1);
+            
             y = squeeze(T(:,ii,t_sim_index(1) + 1:end));
             plot(t_Vec, y(1,(y(1,:) ~= 0)) - tempOffset,'LineWidth',f_PlotLineWidth);
             if (ii == f_IncludedParts(f_DrawParts(1)))
@@ -732,10 +733,10 @@ switch f_DrawCaseIndex
             % Legend
             leg{c} = [Sat_Struct(ii).name ' (cold)'];
             c = c + 1;
-        end
-    case 4 % Both cases
-        leg = cell(numel(f_DrawParts)*2,1);
-        for ii = f_IncludedParts(f_DrawParts)
+            
+        case 4 % Both cases
+            leg = cell(numel(f_DrawParts)*2,1);
+            
             y = squeeze(T(:,ii,t_sim_index(1) + 1:end));
             plot(t_Vec, y(1,(y(1,:) ~= 0)) - tempOffset,'LineWidth',f_PlotLineWidth);
             if (ii == f_IncludedParts(f_DrawParts(1)))
@@ -747,11 +748,11 @@ switch f_DrawCaseIndex
             c = c + 1;
             leg{c} = [Sat_Struct(ii).name ' (hot)'];
             c = c + 1;
-        end
-    otherwise
-        fprintf('\nError making plot, draw case mismatch.\n');
+            
+        otherwise
+            fprintf('\nError making plot, draw case mismatch.\n');
+    end
 end
-
 % Temperature limits
 for tt = 2:numel(f_TemperatureLimits)
     x = xlim;
