@@ -447,11 +447,11 @@ for tt = t_sim_index
     %t_Now = (tt - t_Step) * dT;
     
     % Local zenith
-    [localZenith(1),localZenith(2),localZenith(3)] = ...
+    [earthPos(1),earthPos(2),earthPos(3)] = ...
         sph2cart(deg2rad(dat_EarthAngles{1}(tt)), ...
         deg2rad(dat_EarthAngles{2}(tt)),1);
     % Negative of the vector that points towards the Earth
-    localZenith = - localZenith;
+    earthPos = - earthPos;
     
     % Add correction for albedo (from subsolar angle)
     if (f_UseFixedAlbedo < 0)
@@ -554,8 +554,8 @@ for tt = t_sim_index
                     normalV = Sat_Struct(ss).surfaces(int_ss).normalV;
                     
                     % View Factor
-                    rho = rad2deg(atan2(norm(cross(normalV,localZenith)), ...
-                        dot(normalV,localZenith)));
+                    rho = rad2deg(atan2(norm(cross(normalV,earthPos)), ...
+                        dot(normalV,earthPos)));
                     vF = viewFactor(r,rho);
                     
                     % % % (3) IR Emission (external)
