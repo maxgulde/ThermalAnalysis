@@ -46,9 +46,9 @@ Sat_CellName = 'SolarCells';
 Sat_SurfNum = 1;                % Anzahl der Oberflächen wie in Simulation berechnet
 
 % % % Simulation
-t_Res = 60;                    % [s] zeitliche Auflösung
+t_Res = 60;                     % [s] zeitliche Auflösung
 t_ResAcc = t_Res/6;             % [s] zeitliche Auflösung Zugriff, nur wenn f_UseMeanLoads == 0
-t_Range = [0 1];                 % simulierte Zeit [start ende], [0 1] voll
+t_Range = [0 1];                % simulierte Zeit [start ende], [0 1] voll
 t_Step = 1;                     % Schrittweite
 t_IntLim = [1/60 5];            % Grenzen der Zeitkonstanten für die Simulation der thermischen Kopplung
 
