@@ -89,7 +89,7 @@ fstrXLo = '%s %f %f %f';
 
 % % % Format Strings
 fstrMat = '%s %f %f %f'; % Name Abs Emi HCap
-fstrStr = '%s %s %s %f %f %s'; % Name Optical Bulk TotArea Weight Component
+fstrStr = '%s %s %s %f %f %s %d'; % Name Optical Bulk TotArea Weight Component Internal
 fstrStrSurf = '%s %s %f %f %f %f %d'; % SurfName Optical Area Nx Ny Nz in_flag
 fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f), SubSol(f)
 fStrEarthAngles = '%d %s %d %12s,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f)
@@ -316,6 +316,7 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         Sat_Struct(ii).size = dat_temp{4}(ii);
         Sat_Struct(ii).mass = dat_temp{5}(ii);
         Sat_Struct(ii).cmp = strsplit(dat_temp{6}{ii},',');                % CHECK
+        Sat_Struct(ii).internal = dat_temp{7}(ii);
         % Position in area files
         Sat_Struct(ii).AFileIdx = find(strcmp(dat_Order{:},Sat_Struct(ii).name));
         if (isempty(Sat_Struct(ii).AFileIdx))
@@ -340,10 +341,10 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
                         [dat_temp2{4}(iii), dat_temp2{5}(iii), dat_temp2{6}(iii)];
                     tempStruct(iii).internal = dat_temp2{7}(iii);
                 end
-                Sat_Struct.surfaces = tempStruct;
+                Sat_Struct(ii).surfaces = tempStruct;
             end
         else
-            Sat_Struct.surfaces = struct([]);
+            Sat_Struct(ii).surfaces = struct([]);
         end
     end
     
@@ -418,9 +419,15 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
     fid = fopen(d_IntRad);
     dat_temp = textscan(fid,'%f %f %f %f %f %f %f %f %f','CommentStyle','%');
     fclose(fid);
-    internal_vf = zeros(9);
-    for iii = 1:9
+    internal_vf = zeros(StructNum);
+    for iii = 1:StructNum
         internal_vf(:,iii) = dat_temp{1,iii};
+    end
+    % Normalization for fully internal components
+    for iii = 1:StructNum
+        if Sat_Struct.internal == 1
+            internal_vf(iii,:) = internal_vf(iii,:)./(sum(internal_vf(iii,:)));
+        end
     end
     
     % % extra Lastfälle

@@ -1,6 +1,7 @@
 % Definition of the parts that build up the model. Optical and caloric properties paired from <materials.txt>
 % Components generate heat as defined in <components.txt> (only when Components =/= NA)
 % Parts that require normal vectors have their own definition specified by individual surfaces in a file <Structure/"PartName".txt>
+% Internal flag indicates a part with no view to the outside.
 %
-% Part Name		Optical coating		Bulk			Total Area [m^2]	Weight [kg]		Components
-Cube			Aluminium			Aluminium		0.24				21.6			NA
+% Part Name		Optical coating		Bulk			Total Area [m^2]	Weight [kg]		Components	Internal
+Cube			Aluminium			Aluminium		0.24				21.6			NA			0
