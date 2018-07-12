@@ -38,12 +38,33 @@ RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-T_Start = 273.15+52.5;          % Starttemperatur des Satelliten
+T_Start = 273.15+52;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
 Sat_CellName = 'SolarCells';
 Sat_SurfNum = 1;                % Anzahl der Oberflächen wie in Simulation berechnet
+
+% % % Darstellung
+f_FigNum = 1;           % Nummer der figure
+f_DrawOnTop = 0;        % drüberzeichnen
+f_PlotGenPower = 0;
+f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
+f_Verbose = 0;
+f_UseMeanLoads = 0;
+f_TemperatureLimits = [253 273 293 308];
+f_TemperatureLimitsC = 'bgr';
+
+% % % Optionen zum Zu- und Abschalten bestimmter Effekt
+f_Sun = 1;      % Sonneneinstrahlung
+f_Cmp = 0;      % Abwärme Komponenten
+f_Alb = 1;      % Albedo
+f_EIR = 1;      % Erde IR
+f_Emi = 1;      % Emission Oberflächen
+f_TCo = 0;      % Thermische Kopplung
+f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
+f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
+% f_DrawParts = [1:10 11];
 
 % % % Simulation
 t_Res = 60;                     % [s] zeitliche Auflösung
@@ -62,6 +83,8 @@ d_Suff = '';
 
 % % % Paths
 d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
+% EXPERIMENT
+d_Bas = 'Hollow_Cube';
 d_StrFolder = fullfile(d_Bas,'Structure');
 
 % % % Data Files
@@ -71,7 +94,7 @@ d_AreaS = fullfile(d_Bas,'Out_AreaSunView.txt');
 d_Mat = fullfile(d_Bas,'_materials.txt');        % Materials file
 d_Str = fullfile(d_StrFolder,'_structure.txt');      % Structure file
 d_TCo = fullfile(d_Bas,'_conduction.txt');    % Thermal conductivity
-d_IntRad = fullfile(d_Bas,'_internal_matrix.txt'); % Internal viewfactors
+d_IntRad = fullfile(d_Bas,'matrix.txt'); % Internal viewfactors
 
 % Daten
 fmt_Base = sprintf('_i%.0f_a%.0f_r%02.0f_t%03.0f',Inc,Alt,RAA,t_Res);
@@ -102,17 +125,6 @@ fstrOrder = '%s %s %s %s';
 h_Area = Sat_SurfNum + 2;
 h_Power = 3;
 
-% % % Optionen zum Zu- und Abschalten bestimmter Effekt
-f_Sun = 1;      % Sonneneinstrahlung
-f_Cmp = 0;      % Abwärme Komponenten
-f_Alb = 1;      % Albedo
-f_EIR = 1;      % Erde IR
-f_Emi = 1;      % Emission Oberflächen
-f_TCo = 1;      % Thermische Kopplung
-f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
-f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
-% f_DrawParts = [1:10 11];
-
 % % % Eingabe
 f_ReloadAllData = 1;            % alle Daten (Winkel, Leistung, etc) einladen (langsam)
 f_ReloadMatData = 1;            % Materialdaten einladen (schnell)
@@ -120,15 +132,6 @@ f_IgnoreAccessIntervals = 0;    % ignore increased energy load by communication 
 f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
 
-% % % Darstellung
-f_FigNum = 1;           % Nummer der figure
-f_DrawOnTop = 0;        % drüberzeichnen
-f_PlotGenPower = 0;
-f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
-f_Verbose = 0;
-f_UseMeanLoads = 0;
-f_TemperatureLimits = [253 273 293 308];
-f_TemperatureLimitsC = 'bgr';
 
 % % % Ausgabe
 f_GenerateTFile = 0;
@@ -425,7 +428,7 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
     end
     % Normalization for fully internal components
     for iii = 1:StructNum
-        if Sat_Struct.internal == 1
+        if Sat_Struct(iii).internal == 1
             internal_vf(iii,:) = internal_vf(iii,:)./(sum(internal_vf(iii,:)));
         end
     end
@@ -481,6 +484,7 @@ fprintf('Simulation ');
 T = zeros(2,numel(Sat_Struct),N+1);
 % Starttemperatur
 T(:,:,ran(1)) = T_Start;
+PowerValues = T;
 
 % Oberflächen sortieren
 f_IncludedParts = sort(f_IncludedParts);
@@ -570,6 +574,7 @@ for tt = ran
             %             end
 
             ss_abs = Sat_Mat(sIdx).abs;
+            ss_emi = Sat_Mat(sIdx).emi;
             
             P_C = P_C + A * ss_abs * Sol_Flux(1);
             P_H = P_H + A * ss_abs * Sol_Flux(2);
@@ -653,7 +658,7 @@ for tt = ran
             %end
             % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            for pp = f_IncludedParts(find(f_IncludedParts == ss):end)
+            for pp = f_IncludedParts%(find(f_IncludedParts == ss):end)
                 if ss == pp % Object is itself, calculation would be 0, skip
                     continue;
                 end
@@ -663,7 +668,7 @@ for tt = ran
                 pp_A = Sat_Struct(pp).size; % This is the total surf. area
                 
                 % Internal view factor (source, target)
-                % Radiated power                                           % CHECK PROPER AREA VALUES (SHOULD BE FULL VOLUME, ADD EXTERNAL SURFACE?)
+                % Radiated power
                 P_C = P_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
                 P_H = P_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
             end
@@ -730,6 +735,8 @@ for tt = ran
         dT_H = dE_H / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
         T(1,ss,tt+t_Step) = T(1,ss,tt) + dT_C;
         T(2,ss,tt+t_Step) = T(2,ss,tt) + dT_H;
+        PowerValues(1,ss,tt) = P_C;
+        PowerValues(2,ss,tt) = P_H;
         
         % Prevent negative temperatures
         for ii = 1:2
@@ -811,7 +818,7 @@ fprintf('\n ... fertich.\n');
 %% Plotten der Ergebnisse
     
 fprintf('Ergebnisse zeichnen ...');
-f_DrawParts = 1;
+f_DrawParts = 1:6;
 
 figure(f_FigNum);
 if (f_DrawOnTop == 1)

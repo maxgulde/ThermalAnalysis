@@ -1,0 +1,14 @@
+% View factor matrix generated on Donnerstag, 12. Juli 2018
+% One row per source, e.g. row n: n -> target
+% Row / column 1: Panel_ZM_Cube.006
+% Row / column 2: Panel_ZP_Cube.005
+% Row / column 3: Panel_YM_Cube.004
+% Row / column 4: Panel_YP_Cube.003
+% Row / column 5: Panel_XM_Cube.002
+% Row / column 6: Panel_XP_Cube.001
+0	0.0913	0.0820	0.0825	0.0745	0.0741	
+0.0913	0	0.0825	0.0820	0.0745	0.0741	
+0.1158	0.1153	0	0.0908	0.0820	0.0815	
+0.1153	0.1158	0.0908	0	0.0820	0.0815	
+0.1151	0.1147	0.1151	0.1147	0	0.0904	
+0.1153	0.1148	0.1148	0.1151	0.0904	0	
