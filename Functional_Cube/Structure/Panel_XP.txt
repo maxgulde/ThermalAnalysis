@@ -1,0 +1,7 @@
+% Description of "Panel_XP" surfaces
+% Internal surfaces have a 1 under the Internal column, external ones have a 0
+%
+% Optical		Area [m^2]		NormalX		NormalY		NormalZ		Internal
+Al_Anodyzed		0.0420			1			0			0			0
+Al_Anodyzed		0.001			0			0			1			0
+Al_Anodyzed		0.001			0			0			-1			0

@@ -103,7 +103,7 @@ d_IntRad = fullfile(d_Bas,'_internal_matrix.txt'); % Internal viewfactors
 % % % Format Strings
 fstrMat = '%s %f %f %f'; % Name Abs Emi HCap
 fstrStr = '%s %s %s %f %f %s %d'; % Name Optical Bulk TotArea Weight Component Internal
-fstrStrSurf = '%s %s %f %f %f %f %d'; % SurfName Optical Area Nx Ny Nz in_flag
+fstrStrSurf = '%s %f %f %f %f %d'; % Optical Area Nx Ny Nz in_flag
 fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f), SubSol(f)
 fStrEarthAngles = '%d %s %d %12s,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f)
 fstrTCo = '%s %s %f %f %f';
@@ -285,12 +285,11 @@ if f_ReloadAllData || f_ReloadMatData
                 tempStruct = struct();
                 
                 for iii = 1:tLength
-                    tempStruct(iii).name = dat_temp2{1}{iii};
-                    tempStruct(iii).optical = dat_temp2{2}{iii};
-                    tempStruct(iii).area = dat_temp2{3}(iii);
+                    tempStruct(iii).optical = dat_temp2{1}{iii};
+                    tempStruct(iii).area = dat_temp2{2}(iii);
                     tempStruct(iii).normalV = ...
-                        [dat_temp2{4}(iii), dat_temp2{5}(iii), dat_temp2{6}(iii)];
-                    tempStruct(iii).internal = dat_temp2{7}(iii);
+                        [dat_temp2{3}(iii), dat_temp2{4}(iii), dat_temp2{5}(iii)];
+                    tempStruct(iii).internal = dat_temp2{6}(iii);
                 end
                 Sat_Struct.surfaces = tempStruct;
             end

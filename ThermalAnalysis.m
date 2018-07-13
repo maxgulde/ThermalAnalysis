@@ -38,7 +38,8 @@ RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-T_Start = 273.15+52;          % Starttemperatur des Satelliten
+initTempC = 0;                 % Initial temperature in degrees C
+T_Start = 273.15+initTempC;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
 Sat_CellEff = 0.34;             % Effizienz Solarzellen
@@ -61,7 +62,7 @@ f_Cmp = 0;      % Abwärme Komponenten
 f_Alb = 1;      % Albedo
 f_EIR = 1;      % Erde IR
 f_Emi = 1;      % Emission Oberflächen
-f_TCo = 0;      % Thermische Kopplung
+f_TCo = 1;      % Thermische Kopplung
 f_XLo = 0;      % extra Loads, die nur kurzzeitig anfallen
 f_IncludedParts = 0;    % Indices simulierte Strukturteile, 0 = alle
 % f_DrawParts = [1:10 11];
@@ -84,7 +85,7 @@ d_Suff = '';
 % % % Paths
 d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
 % EXPERIMENT
-d_Bas = 'Hollow_Cube';
+d_Bas = 'Functional_Cube';
 d_StrFolder = fullfile(d_Bas,'Structure');
 
 % % % Data Files
@@ -113,7 +114,7 @@ fstrXLo = '%s %f %f %f';
 % % % Format Strings
 fstrMat = '%s %f %f %f'; % Name Abs Emi HCap
 fstrStr = '%s %s %s %f %f %s %d'; % Name Optical Bulk TotArea Weight Component Internal
-fstrStrSurf = '%s %s %f %f %f %f %d'; % SurfName Optical Area Nx Ny Nz in_flag
+fstrStrSurf = '%s %f %f %f %f %d'; % Optical Area Nx Ny Nz in_flag
 fstrSubSol = '%d %s %d %12s,%f,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f), SubSol(f)
 fStrEarthAngles = '%d %s %d %12s,%f,%f'; % D(d) M(s) Y(d) t(12s), Az(f), El(f)
 fstrTCo = '%s %s %f %f %f';
@@ -337,12 +338,11 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
                 tempStruct = struct();
                 
                 for iii = 1:tLength
-                    tempStruct(iii).name = dat_temp2{1}{iii};
-                    tempStruct(iii).optical = dat_temp2{2}{iii};
-                    tempStruct(iii).area = dat_temp2{3}(iii);
+                    tempStruct(iii).optical = dat_temp2{1}{iii};
+                    tempStruct(iii).area = dat_temp2{2}(iii);
                     tempStruct(iii).normalV = ...
-                        [dat_temp2{4}(iii), dat_temp2{5}(iii), dat_temp2{6}(iii)];
-                    tempStruct(iii).internal = dat_temp2{7}(iii);
+                        [dat_temp2{3}(iii), dat_temp2{4}(iii), dat_temp2{5}(iii)];
+                    tempStruct(iii).internal = dat_temp2{6}(iii);
                 end
                 Sat_Struct(ii).surfaces = tempStruct;
             end
@@ -818,7 +818,7 @@ fprintf('\n ... fertich.\n');
 %% Plotten der Ergebnisse
     
 fprintf('Ergebnisse zeichnen ...');
-f_DrawParts = 1:6;
+f_DrawParts = f_IncludedParts;
 
 figure(f_FigNum);
 if (f_DrawOnTop == 1)
