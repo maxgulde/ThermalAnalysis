@@ -7,4 +7,3 @@ surf2			Aluminium	0.0020			-1			0			0			0
 surf3			Aluminium	0.0020			0			1			0			0
 surf4			Aluminium	0.0020			0			-1			0			0
 surf5			Aluminium	0.0400			0			0			1			0
-surf6			Aluminium	0.0400			0			0			-1			1

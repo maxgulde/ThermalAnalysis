@@ -27,5 +27,5 @@ Al_Mylar_4u		0.14	0.28	0
 Al_Kapton_2u	0.23	0.24	0
 Al_Polished		0.14	0.03	0
 % Verification
-ScAlMalloy		0 		0.20	1000
+ScAlMalloy		0 		0.20	940
 FR_4_v			0		0.5		1300

@@ -3,8 +3,3 @@
 %
 % SurfaceID		Optical		Area [m^2]		NormalX		NormalY		NormalZ		Internal
 surf1			Aluminium	0.0324			1			0			0			0
-surf2			Aluminium	0.0324			-1			0			0			1
-surf3			Aluminium	0.0018			0			1			0			1
-surf4			Aluminium	0.0018			0			-1			0			1
-surf5			Aluminium	0.0018			0			0			1			1
-surf6			Aluminium	0.0018			0			0			-1			1

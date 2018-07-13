@@ -658,7 +658,7 @@ for tt = ran
             %end
             % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            for pp = f_IncludedParts%(find(f_IncludedParts == ss):end)
+            for pp = f_IncludedParts
                 if ss == pp % Object is itself, calculation would be 0, skip
                     continue;
                 end
