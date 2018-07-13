@@ -38,7 +38,7 @@ RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-initTempC = 0;                 % Initial temperature in degrees C
+initTempC = 10;                 % Initial temperature in degrees C
 T_Start = 273.15+initTempC;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
@@ -50,7 +50,7 @@ Sat_SurfNum = 1;                % Anzahl der Oberflächen wie in Simulation berec
 f_FigNum = 1;           % Nummer der figure
 f_DrawOnTop = 0;        % drüberzeichnen
 f_PlotGenPower = 0;
-f_DrawCaseIndex = 1;    % 1: mean, 2: hot, 3: cold, 4: both
+f_DrawCaseIndex = 2;    % 1: mean, 2: hot, 3: cold, 4: both
 f_Verbose = 0;
 f_UseMeanLoads = 0;
 f_TemperatureLimits = [253 273 293 308];
@@ -581,6 +581,10 @@ for tt = ran
         end
         
         % % % (2) Komponenten
+        if ss == 2 %%%%%%%%%% EXPERIMENTAL
+            P_C = P_C + 2;
+            P_H = P_H + 2;
+        end
         if (f_Cmp == 1)
             % Durchschnittsverbrauch ermitteln
             P = 0;
