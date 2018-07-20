@@ -38,7 +38,7 @@ RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-initTempC = 10;                 % Initial temperature in degrees C
+initTempC = 56;                 % Initial temperature in degrees C
 T_Start = 273.15+initTempC;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
@@ -85,7 +85,7 @@ d_Suff = '';
 % % % Paths
 d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
 % EXPERIMENT
-d_Bas = 'Functional_Cube';
+d_Bas = 'Hollow_Cube';
 d_StrFolder = fullfile(d_Bas,'Structure');
 
 % % % Data Files
@@ -553,6 +553,9 @@ for tt = ran
             bIdx = 1;
         end
         
+        ss_abs = Sat_Mat(sIdx).abs;
+        ss_emi = Sat_Mat(sIdx).emi;
+        
         % % % (1) Direct Sunlight (Optimized by Out_AreaSunView)
         if f_Sun == 1
             % Index der Komponente in Flächendatei
@@ -572,9 +575,6 @@ for tt = ran
             %             if (strcmp(Sat_Struct(ss).name(1:end-1),Sat_CellName) == 1)
             %                 A = A * (1 - Sat_CellEff);
             %             end
-
-            ss_abs = Sat_Mat(sIdx).abs;
-            ss_emi = Sat_Mat(sIdx).emi;
             
             P_C = P_C + A * ss_abs * Sol_Flux(1);
             P_H = P_H + A * ss_abs * Sol_Flux(2);
@@ -582,8 +582,8 @@ for tt = ran
         
         % % % (2) Komponenten
         if ss == 2 %%%%%%%%%% EXPERIMENTAL
-            P_C = P_C + 2;
-            P_H = P_H + 2;
+%             P_C = P_C + 2;
+%             P_H = P_H + 2;
         end
         if (f_Cmp == 1)
             % Durchschnittsverbrauch ermitteln

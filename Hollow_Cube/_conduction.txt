@@ -1,16 +1,16 @@
 % Thermische leitende Verbindungen zwischen den Oberflächen
 % Name, Partner: Name der beiden Oberflächen
 % Name			Partner			L[m]	A[m^2]	C[W/mK]
-Panel_XM		Panel_YM		0.20	0.0018	200
-Panel_XM		Panel_YP		0.20	0.0018	200
-Panel_XM		Panel_ZM		0.20	0.0018	200
-Panel_XM		Panel_ZP		0.20	0.0018	200
-Panel_XP		Panel_YM		0.20	0.0018	200
-Panel_XP		Panel_YP		0.20	0.0018	200
-Panel_XP		Panel_ZM		0.20	0.0018	200
-Panel_XP		Panel_ZP		0.20	0.0018	200
+Panel_XM		Panel_YM		0.20	0.0018	33
+Panel_XM		Panel_YP		0.20	0.0018	33
+Panel_XM		Panel_ZM		0.20	0.0018	33
+Panel_XM		Panel_ZP		0.20	0.0018	33
+Panel_XP		Panel_YM		0.20	0.0018	33
+Panel_XP		Panel_YP		0.20	0.0018	33
+Panel_XP		Panel_ZM		0.20	0.0018	33
+Panel_XP		Panel_ZP		0.20	0.0018	33
 %
-Panel_YM		Panel_ZM		0.20	0.0020	200
-Panel_YM		Panel_ZP		0.20	0.0020	200
-Panel_YP		Panel_ZM		0.20	0.0020	200
-Panel_YP		Panel_ZP		0.20	0.0020	200
+Panel_YM		Panel_ZM		0.20	0.0020	33
+Panel_YM		Panel_ZP		0.20	0.0020	33
+Panel_YP		Panel_ZM		0.20	0.0020	33
+Panel_YP		Panel_ZP		0.20	0.0020	33
