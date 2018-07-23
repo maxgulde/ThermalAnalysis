@@ -83,9 +83,9 @@ d_XLo = [d_Par '_XLoads.txt'];
 d_Suff = '';
 
 % % % Paths
-d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
+%d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
 % EXPERIMENT
-d_Bas = 'Hollow_Cube';
+d_Bas = 'Hollow_Cube'; % Base path
 d_StrFolder = fullfile(d_Bas,'Structure');
 
 % % % Data Files
@@ -104,7 +104,7 @@ d_Power = sprintf('Out_Power_i98_1929_a700_r10_t120.txt');
 d_Access = sprintf('SimpleSat AccessTimes.csv');
 
 % Formatstrings
-fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)];
+%fstrAreas = ['%d %s %d %12s' repmat(';%f',1,Sat_SurfNum)]; % Created and updated after (reading file)
 fstrPower = '%d %s %d %12s;%f';
 fstrAccess = '%f,%f %s %f %f:%f:%f,%f %s %f %f:%f:%f,%f';
 fstrDateOut = '%.0f %s %.0f %02.0f:%02.0f:%02.0f';
@@ -123,7 +123,7 @@ fstrDate = 'dd mmm yyyy HH:MM:SS';
 fstrOrder = '%s %s %s %s';
 
 % Header Zeilen
-h_Area = Sat_SurfNum + 2;
+%h_Area = Sat_SurfNum + 2; % Created and updated after (reading file)
 h_Power = 3;
 
 % % % Eingabe
@@ -132,7 +132,6 @@ f_ReloadMatData = 1;            % Materialdaten einladen (schnell)
 f_IgnoreAccessIntervals = 0;    % ignore increased energy load by communication devices
 f_UseFixedAlbedo = -1;          % set to < 0 to use correction table
 f_UseCelsius = 273.15;           % set to == 0 to use Kelvin
-
 
 % % % Ausgabe
 f_GenerateTFile = 0;
@@ -240,29 +239,6 @@ if (f_ReloadAllData == 1)
             'Earth Angles file.\n']);
     end
     
-    % % % % % % % % % Moved to the next loading step % % % % % % % % % % %
-    % Flächen und Leistung
-    % Reihenfolge extrahieren
-    %     fid = fopen(d_AreaS);
-    %     dat_temp = textscan(fid, fstrOrder, h_Area-2, 'HeaderLines', 2);
-    %     dat_Order = dat_temp(3);
-    %     fclose(fid);
-    %
-    %     % Flächen extrahieren
-    %     fprintf(' ... Flächen aus Sonnensicht ...\n');
-    %     dat_temp = ReadCSV(d_AreaS,fstrAreas,h_Area);
-    %     dat_AreaS = dat_temp(5:end);
-    %     dat_Time = dat_temp(1:4);
-    %     %fprintf(' ... Flächen aus Erdsicht ...\n');
-    %     %dat_temp = ReadCSV(d_AreaE,fstrAreas,h_Area);
-    %     %dat_AreaE = dat_temp(5:end);
-    %     if (f_PlotGenPower == 1)
-    %        fprintf(' ... Erzeugte Leistung ...\n');
-    %        dat_temp = ReadCSV(d_Power,fstrPower,h_Power);
-    %        dat_Power = dat_temp(5:end);
-    %     end
-    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-    
     % % Zugriffszeiten
     if (f_IgnoreAccessIntervals == 0)
         fprintf(' ... Zugriffszeiten ...\n');
@@ -319,7 +295,7 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
         Sat_Struct(ii).bulk = dat_temp{3}{ii};
         Sat_Struct(ii).size = dat_temp{4}(ii);
         Sat_Struct(ii).mass = dat_temp{5}(ii);
-        Sat_Struct(ii).cmp = strsplit(dat_temp{6}{ii},',');                % CHECK
+        Sat_Struct(ii).cmp = strsplit(dat_temp{6}{ii},',');
         Sat_Struct(ii).internal = dat_temp{7}(ii);
         % Position in area files
         Sat_Struct(ii).AFileIdx = find(strcmp(dat_Order{:},Sat_Struct(ii).name));
@@ -350,10 +326,6 @@ if (f_ReloadMatData == 1 || f_ReloadAllData == 1)
             Sat_Struct(ii).surfaces = struct([]);
         end
     end
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % % Komponenten
     fprintf(' ... Komponenten ...\n');
@@ -489,8 +461,8 @@ PowerValues = T;
 % Oberflächen sortieren
 f_IncludedParts = sort(f_IncludedParts);
 
-% Delta t
-dT = t_Res * t_Step;
+% Delta time
+dTime = t_Res * t_Step;
 
 % Correction for the inclination
 inc_c = Inc;
@@ -516,7 +488,7 @@ for tt = ran
     end
     
     % Current time (used for internal components)
-    %t_Now = (tt - t_Step) * dT;
+    %t_Now = (tt - t_Step) * dTime;
     
     % Local zenith
     [earthPos(1),earthPos(2),earthPos(3)] = ...
@@ -581,10 +553,6 @@ for tt = ran
         end
         
         % % % (2) Komponenten
-        if ss == 2 %%%%%%%%%% EXPERIMENTAL
-%             P_C = P_C + 2;
-%             P_H = P_H + 2;
-        end
         if (f_Cmp == 1)
             % Durchschnittsverbrauch ermitteln
             P = 0;
@@ -651,17 +619,14 @@ for tt = ran
             P_C = P_C + P;
             P_H = P_H + P;
         end
+        % % % (2) Manual power input
+        if ss == 2
+%             P_C = P_C + 2;
+%             P_H = P_H + 2;
+        end
         
-        % % % (3) IR Emission (internal only, optimized by _internal_matrix)
+        % % % (3) IR Emission (internal only, optimized by matrix.txt)
         if f_Emi == 1
-            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % INCORPORATE PROPER IMPLEMENTATION
-            % Update area to effective area in case of modified radiator
-            %if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
-            %    A = A * Sat_RadEffArea;
-            %end
-            % IGNORED CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
             for pp = f_IncludedParts
                 if ss == pp % Object is itself, calculation would be 0, skip
                     continue;
@@ -672,7 +637,7 @@ for tt = ran
                 pp_A = Sat_Struct(pp).size; % This is the total surf. area
                 
                 % Internal view factor (source, target)
-                % Radiated power
+                % Radiated power absorbed by ss
                 P_C = P_C + ksb * (T(1,pp,tt)^4 - T(1,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
                 P_H = P_H + ksb * (T(2,pp,tt)^4 - T(2,ss,tt)^4) * ss_emi * pp_emi * pp_A * internal_vf(pp,ss);
             end
@@ -702,8 +667,14 @@ for tt = ran
                     
                     % % % (3) IR Emission (external)
                     if f_Emi == 1
-                        P_C = P_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
-                        P_H = P_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A * int_ss_emi;
+                        % Update area to effective area in case of modified radiator
+                        if (strcmp(Sat_Struct(ss).name,Sat_RadName) == 1)
+                            A_emi = A * Sat_RadEffArea;
+                        else
+                            A_emi = A;
+                        end
+                        P_C = P_C - ksb * (T(1,ss,tt)^4 - T_Space^4) * A_emi * int_ss_emi;
+                        P_H = P_H - ksb * (T(2,ss,tt)^4 - T_Space^4) * A_emi * int_ss_emi;
                     end
                     
                     % % % (4) Earth IR
@@ -724,15 +695,14 @@ for tt = ran
                 end
             end
         else % This part is not divided into individual surfaces
-            % Would there be data where there it's not divided into
-            % surfaces? Add non separated case (?)
+            % Parts with only one defined surface?
         end
         
         % % % (X) Temperature Calculation
         
         % Energy change calculation
-        dE_C = P_C * dT;
-        dE_H = P_H * dT;
+        dE_C = P_C * dTime;
+        dE_H = P_H * dTime;
         
         % Temperature change calculation
         dT_C = dE_C / (Sat_Mat(bIdx).cap * Sat_Struct(ss).mass);
