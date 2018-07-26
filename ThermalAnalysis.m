@@ -38,7 +38,7 @@ RAA = 10;   % [deg]
 
 % % % Satellit
 satName = 'ERNST';              % Name des Satelliten
-initTempC = 56;                 % Initial temperature in degrees C
+initTempC = 20;                 % Initial temperature in degrees C
 T_Start = 273.15+initTempC;          % Starttemperatur des Satelliten
 Sat_RadEffArea = 1.36;          % effektive Fläche des Radiators, Pyramide
 Sat_RadName = 'Radiator';
@@ -85,7 +85,7 @@ d_Suff = '';
 % % % Paths
 %d_Bas = sprintf('Data_%s_i%i_a%i_r%i_t%i',satName,Inc,Alt,RAA,t_Res); % Base path
 % EXPERIMENT
-d_Bas = 'Hollow_Cube'; % Base path
+d_Bas = 'Functional_Cube'; % Base path
 d_StrFolder = fullfile(d_Bas,'Structure');
 
 % % % Data Files
